@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data (géré par DVC)
+data/raw/
+data/processed/
+data/predictions/
+*.csv
+*.parquet
+*.pkl
+*.joblib
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# DVC
+/dvc.lock
+/.dvc/cache
+/.dvc/tmp
+
+# Great Expectations
+great_expectations/uncommitted/
+great_expectations/.ge_store_backend_id
+
+# Models (géré par MLflow/DVC)
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# Temporary files
+tmp/
+temp/
+*.tmp
