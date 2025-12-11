@@ -1,0 +1,22 @@
+# MLflow Configuration
+
+# Tracking
+tracking_uri: "mlruns"  # Local tracking (ou dagshub URL pour remote)
+experiment_name: "premier-league-prediction"
+
+# Model Registry
+registry_uri: "mlruns"
+
+# Artifacts
+artifact_location: "mlartifacts"
+
+# Auto-logging
+autolog: true
+
+# DagsHub Integration (optionnel)
+# Si vous voulez tracker sur DagsHub au lieu de local
+dagshub:
+  enabled: false  # Mettre true pour activer
+  repo_owner: "7a99ui"
+  repo_name: "premier_league_mlops"
+  # MLflow tracking URI sera automatiquement configuré

@@ -9,3 +9,8 @@ python src\data\validation.py --mode raw --seasons 2015-2016 2016-2017 2017-2018
 
 # Préparer les données pour le modeling
 python src\data\prepare.py --features-path data\processed\v1\features.parquet --output-dir data\processed\v1 --min-gameweek 10 --max-missing-pct 30
+
+
+
+# Lancer le pipeline complet (3 phases)
+python src\models\train.py --phase all --data-dir data\processed\v1 --top-n 3
