@@ -1,0 +1,1423 @@
+{
+  "timestamp": "2025-12-11T11:06:51.419443",
+  "total_validations": 16,
+  "results": [
+    {
+      "season": "2015-2016",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.050547",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2015-2016",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.079864",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2016-2017",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.102872",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2016-2017",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.131588",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2017-2018",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.156734",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2017-2018",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.180241",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2018-2019",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.201314",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2018-2019",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.224864",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2019-2020",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.245229",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2019-2020",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.270640",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2020-2021",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.294044",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2020-2021",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.321987",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": false,
+          "message": "Some gameweeks missing teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 0.9375
+    },
+    {
+      "season": "2021-2022",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.343765",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2021-2022",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.370782",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2022-2023",
+      "data_type": "raw_results",
+      "timestamp": "2025-12-11T11:06:51.393238",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "match_id",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "home_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "away_goals",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "result",
+          "success": true
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "match_id",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "gameweek",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "home_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "values_not_null",
+          "column": "away_team",
+          "success": true,
+          "message": "No null values"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1.0-38.0 \u2713"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "home_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "goals_non_negative",
+          "column": "away_goals",
+          "success": true,
+          "message": "All goals valid"
+        },
+        {
+          "expectation": "match_id_unique",
+          "success": true,
+          "message": "All match IDs unique"
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "season": "2022-2023",
+      "data_type": "standings",
+      "timestamp": "2025-12-11T11:06:51.418448",
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "position",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "played",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "won",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "drawn",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "lost",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_for",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goals_against",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "goal_difference",
+          "success": true
+        },
+        {
+          "expectation": "20_teams_per_gameweek",
+          "success": true,
+          "message": "All gameweeks have 20 teams"
+        },
+        {
+          "expectation": "points_calculation_correct",
+          "success": true,
+          "message": "Points calculation correct"
+        },
+        {
+          "expectation": "positions_1_to_20",
+          "success": true,
+          "message": "Positions range: 1-20 \u2713"
+        },
+        {
+          "expectation": "goal_difference_correct",
+          "success": true,
+          "message": "Goal difference correct"
+        }
+      ],
+      "success_rate": 1.0
+    }
+  ],
+  "overall_success_rate": 0.99609375
+}

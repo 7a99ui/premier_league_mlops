@@ -1,0 +1,79 @@
+{
+  "timestamp": "2025-12-11T00:47:36.436156",
+  "total_validations": 1,
+  "results": [
+    {
+      "data_type": "features",
+      "timestamp": "2025-12-11T00:47:36.436156",
+      "n_records": 6076,
+      "n_features": 44,
+      "expectations": [
+        {
+          "expectation": "column_exists",
+          "column": "season",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "team",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "gameweek",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "current_points",
+          "success": true
+        },
+        {
+          "expectation": "column_exists",
+          "column": "target_final_points",
+          "success": true
+        },
+        {
+          "expectation": "low_missing_rate",
+          "column": "current_points",
+          "success": true,
+          "message": "Missing rate: 0.00% \u2713"
+        },
+        {
+          "expectation": "low_missing_rate",
+          "column": "target_final_points",
+          "success": true,
+          "message": "Missing rate: 0.00% \u2713"
+        },
+        {
+          "expectation": "low_missing_rate",
+          "column": "points_per_game",
+          "success": true,
+          "message": "Missing rate: 0.00% \u2713"
+        },
+        {
+          "expectation": "points_in_valid_range",
+          "success": true,
+          "message": "Max points: 100 \u2713"
+        },
+        {
+          "expectation": "gameweek_in_range",
+          "success": true,
+          "message": "Gameweek range: 1-38 \u2713"
+        },
+        {
+          "expectation": "target_available",
+          "success": true,
+          "message": "Target availability: 100.00%"
+        },
+        {
+          "expectation": "no_duplicates",
+          "success": true,
+          "message": "No duplicates"
+        }
+      ],
+      "success_rate": 1.0
+    }
+  ],
+  "overall_success_rate": 1.0
+}
