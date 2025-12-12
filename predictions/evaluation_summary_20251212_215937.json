@@ -1,0 +1,10 @@
+{
+  "model_name": "ensemble_stacking",
+  "timestamp": "20251212_215937",
+  "test_mae": 5.185233351228121,
+  "test_rmse": 6.787742917495647,
+  "test_r2": 0.8534221348306708,
+  "median_abs_error": 4.218578814493203,
+  "top4_accuracy": 100.0,
+  "bottom3_accuracy": 66.66666666666666
+}

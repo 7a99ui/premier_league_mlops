@@ -6,13 +6,35 @@ import joblib
 import json
 from pathlib import Path
 from datetime import datetime
+import sys
 
 
 class ModelLoader:
     """Charge et gère les modèles sauvegardés"""
     
     def __init__(self, models_dir='models/production'):
-        self.models_dir = Path(models_dir)
+        # Convertir en Path object
+        base_path = Path.cwd()  # Répertoire actuel
+        
+        # Essayer plusieurs chemins possibles
+        possible_paths = [
+            base_path / models_dir,               # Depuis la racine du projet
+            base_path / '..' / models_dir,        # Depuis notebooks/
+            base_path / 'notebooks' / '..' / models_dir,  # Depuis notebooks
+            Path(models_dir).resolve(),           # Chemin absolu
+        ]
+        
+        for path in possible_paths:
+            path = path.resolve()  # Convertir en chemin absolu
+            if path.exists():
+                self.models_dir = path
+                print(f"✅ Models directory found: {self.models_dir}")
+                break
+        else:
+            # Si aucun chemin ne fonctionne, créer le répertoire
+            self.models_dir = base_path / models_dir
+            self.models_dir.mkdir(parents=True, exist_ok=True)
+            print(f"⚠️  Created models directory: {self.models_dir}")
     
     def load_latest_model(self):
         """
@@ -24,8 +46,23 @@ class ModelLoader:
         model_path = self.models_dir / 'latest_model.joblib'
         metadata_path = self.models_dir / 'latest_metadata.json'
         
+        print(f"🔍 Looking for model at: {model_path}")
+        print(f"🔍 Looking for metadata at: {metadata_path}")
+        
         if not model_path.exists():
-            raise FileNotFoundError(f"No model found at {model_path}")
+            # Chercher le modèle le plus récent si latest_model.joblib n'existe pas
+            print(f"⚠️  latest_model.joblib not found, searching for latest model...")
+            model_files = list(self.models_dir.glob('best_model_*.joblib'))
+            
+            if not model_files:
+                raise FileNotFoundError(f"No models found in {self.models_dir}")
+            
+            # Prendre le modèle le plus récent
+            latest_model = sorted(model_files)[-1]
+            timestamp = latest_model.stem.replace('best_model_', '')
+            
+            print(f"✅ Found latest model: {latest_model.name}")
+            return self.load_model_by_timestamp(timestamp)
         
         # Load model
         model = joblib.load(model_path)
@@ -54,6 +91,10 @@ class ModelLoader:
         model_path = self.models_dir / f'best_model_{timestamp}.joblib'
         metadata_path = self.models_dir / f'model_metadata_{timestamp}.json'
         
+        print(f"🔍 Loading model with timestamp: {timestamp}")
+        print(f"   Model path: {model_path}")
+        print(f"   Metadata path: {metadata_path}")
+        
         if not model_path.exists():
             raise FileNotFoundError(f"No model found for timestamp {timestamp}")
         
@@ -61,6 +102,8 @@ class ModelLoader:
         
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)
+        
+        print(f"✅ Loaded model: {metadata['model_name']}")
         
         return model, metadata
     
@@ -102,7 +145,8 @@ class ModelLoader:
         models = self.list_available_models()
         
         if not models:
-            print("No models found")
+            print(f"⚠️  No models found in {self.models_dir}")
+            print(f"    Directory contents: {list(self.models_dir.glob('*'))}")
             return None
         
         df = pd.DataFrame(models)
@@ -116,12 +160,17 @@ class ModelLoader:
 class ModelPredictor:
     """Classe pour faire des prédictions avec un modèle chargé"""
     
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, models_dir=None):
         """
         Args:
             model_path: Chemin vers le modèle. Si None, charge le latest.
+            models_dir: Dossier des modèles. Si None, utilise le chemin par défaut.
         """
-        loader = ModelLoader()
+        # Utiliser le models_dir spécifié ou le chemin par défaut
+        if models_dir:
+            loader = ModelLoader(models_dir)
+        else:
+            loader = ModelLoader()
         
         if model_path:
             # Load specific model
@@ -191,18 +240,19 @@ class ModelPredictor:
         return latest_predictions.reset_index()
 
 
-def predict_from_latest_data(data_path, output_path=None):
+def predict_from_latest_data(data_path, output_path=None, models_dir=None):
     """
     Fonction utilitaire pour faire des prédictions rapides
     
     Args:
         data_path: Chemin vers les données à prédire
         output_path: Chemin de sortie (optionnel)
+        models_dir: Dossier des modèles (optionnel)
     """
     import pandas as pd
     
-    # Load predictor
-    predictor = ModelPredictor()
+    # Load predictor avec le models_dir spécifié
+    predictor = ModelPredictor(models_dir=models_dir)
     
     # Load data
     if isinstance(data_path, str):
