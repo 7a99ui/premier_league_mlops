@@ -1,5 +1,6 @@
 """
-Utility functions for model management
+Utility functions for model management - CORRECTED VERSION
+FIX: Use ONLY features.parquet to avoid duplications
 """
 
 import joblib
@@ -13,25 +14,22 @@ class ModelLoader:
     """Charge et gère les modèles sauvegardés"""
     
     def __init__(self, models_dir='models/production'):
-        # Convertir en Path object
-        base_path = Path.cwd()  # Répertoire actuel
+        base_path = Path.cwd()
         
-        # Essayer plusieurs chemins possibles
         possible_paths = [
-            base_path / models_dir,               # Depuis la racine du projet
-            base_path / '..' / models_dir,        # Depuis notebooks/
-            base_path / 'notebooks' / '..' / models_dir,  # Depuis notebooks
-            Path(models_dir).resolve(),           # Chemin absolu
+            base_path / models_dir,
+            base_path / '..' / models_dir,
+            base_path / 'notebooks' / '..' / models_dir,
+            Path(models_dir).resolve(),
         ]
         
         for path in possible_paths:
-            path = path.resolve()  # Convertir en chemin absolu
+            path = path.resolve()
             if path.exists():
                 self.models_dir = path
                 print(f"✅ Models directory found: {self.models_dir}")
                 break
         else:
-            # Si aucun chemin ne fonctionne, créer le répertoire
             self.models_dir = base_path / models_dir
             self.models_dir.mkdir(parents=True, exist_ok=True)
             print(f"⚠️  Created models directory: {self.models_dir}")
@@ -50,24 +48,20 @@ class ModelLoader:
         print(f"🔍 Looking for metadata at: {metadata_path}")
         
         if not model_path.exists():
-            # Chercher le modèle le plus récent si latest_model.joblib n'existe pas
             print(f"⚠️  latest_model.joblib not found, searching for latest model...")
             model_files = list(self.models_dir.glob('best_model_*.joblib'))
             
             if not model_files:
                 raise FileNotFoundError(f"No models found in {self.models_dir}")
             
-            # Prendre le modèle le plus récent
             latest_model = sorted(model_files)[-1]
             timestamp = latest_model.stem.replace('best_model_', '')
             
             print(f"✅ Found latest model: {latest_model.name}")
             return self.load_model_by_timestamp(timestamp)
         
-        # Load model
         model = joblib.load(model_path)
         
-        # Load metadata
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)
         
@@ -128,7 +122,6 @@ class ModelLoader:
                     'file': metadata['model_file']
                 })
         
-        # Trier par timestamp (plus récent en premier)
         models.sort(key=lambda x: x['timestamp'], reverse=True)
         
         return models
@@ -166,21 +159,21 @@ class ModelPredictor:
             model_path: Chemin vers le modèle. Si None, charge le latest.
             models_dir: Dossier des modèles. Si None, utilise le chemin par défaut.
         """
-        # Utiliser le models_dir spécifié ou le chemin par défaut
         if models_dir:
             loader = ModelLoader(models_dir)
         else:
             loader = ModelLoader()
         
         if model_path:
-            # Load specific model
             timestamp = Path(model_path).stem.replace('best_model_', '')
             self.model, self.metadata = loader.load_model_by_timestamp(timestamp)
         else:
-            # Load latest
             self.model, self.metadata = loader.load_latest_model()
         
-        self.feature_names = self.metadata.get('feature_names', [])
+        self.training_feature_order = self.metadata.get('feature_names', [])
+        self.feature_names = self.training_feature_order
+        
+        print(f"📋 Model loaded: {len(self.training_feature_order)} features")
     
     def predict(self, X):
         """
@@ -194,10 +187,8 @@ class ModelPredictor:
         """
         import pandas as pd
         
-        # Vérifier que les features correspondent
         if isinstance(X, pd.DataFrame):
             if self.feature_names:
-                # Réordonner les colonnes si nécessaire
                 missing_features = set(self.feature_names) - set(X.columns)
                 if missing_features:
                     raise ValueError(f"Missing features: {missing_features}")
@@ -218,23 +209,40 @@ class ModelPredictor:
         """
         import pandas as pd
         
-        # Obtenir les prédictions
-        predictions = self.predict(features_df[self.feature_names])
+        print(f"🔍 Checking feature alignment...")
         
-        # Créer le DataFrame de résultats
+        available_features = [col for col in features_df.columns 
+                            if col not in ['team', 'season', 'gameweek', 'target_final_points']]
+        
+        expected_features = self.feature_names
+        
+        print(f"   Available features: {len(available_features)}")
+        print(f"   Expected features: {len(expected_features)}")
+        
+        missing_features = set(expected_features) - set(available_features)
+        if missing_features:
+            raise ValueError(f"❌ Missing features required by model: {missing_features}")
+        
+        extra_features = set(available_features) - set(expected_features)
+        if extra_features:
+            print(f"   ⚠️  Extra features (will be ignored): {extra_features}")
+        
+        X = features_df[expected_features]
+        print(f"   ✅ Using {len(expected_features)} features in correct order")
+        
+        predictions = self.model.predict(X)
+        
         results = pd.DataFrame({
             'team': features_df['team'],
             'gameweek': features_df['gameweek'],
             'predicted_final_points': predictions
         })
         
-        # Pour avoir le classement, prendre la prédiction la plus récente par équipe
         latest_predictions = results.sort_values('gameweek').groupby('team').last()
         latest_predictions['predicted_rank'] = latest_predictions['predicted_final_points'].rank(
             ascending=False, method='min'
         ).astype(int)
         
-        # Trier par classement prédit
         latest_predictions = latest_predictions.sort_values('predicted_rank')
         
         return latest_predictions.reset_index()
@@ -251,10 +259,8 @@ def predict_from_latest_data(data_path, output_path=None, models_dir=None):
     """
     import pandas as pd
     
-    # Load predictor avec le models_dir spécifié
     predictor = ModelPredictor(models_dir=models_dir)
     
-    # Load data
     if isinstance(data_path, str):
         if data_path.endswith('.parquet'):
             data = pd.read_parquet(data_path)
@@ -263,15 +269,12 @@ def predict_from_latest_data(data_path, output_path=None, models_dir=None):
     else:
         data = data_path
     
-    # Predict
     predictions = predictor.predict_final_standings(data)
     
-    # Save if output path provided
     if output_path:
         predictions.to_csv(output_path, index=False)
         print(f"✅ Predictions saved to {output_path}")
     
-    # Display
     print("\n📊 Predicted Final Standings:\n")
     print(predictions[['predicted_rank', 'team', 'predicted_final_points']].to_string(index=False))
     
@@ -281,10 +284,8 @@ def predict_from_latest_data(data_path, output_path=None, models_dir=None):
 if __name__ == '__main__':
     """Exemple d'utilisation"""
     
-    # List available models
     loader = ModelLoader()
     loader.compare_models()
     
-    # Load and use latest model
     predictor = ModelPredictor()
     print(f"\nModel loaded and ready for predictions!")

@@ -14,3 +14,22 @@ python src\data\prepare.py --features-path data\processed\v1\features.parquet --
 
 # Lancer le pipeline complet (3 phases)
 python src\models\train.py --phase all --data-dir data\processed\v1 --top-n 3
+
+
+
+
+# Test v1 - simple
+echo "=== TEST v1 SIMPLE ==="
+python src\models\predict.py --season 2022-2023 --gameweek 38 --data-version v1
+
+# Test v1 - évolution  
+echo "=== TEST v1 EVOLUTION ==="
+python src\models\predict.py --season 2022-2023 --gameweek 38 --evolution --data-version v1
+
+# Test v2 - simple
+echo "=== TEST v2 SIMPLE ==="
+python src\models\predict.py --season 2023-2024 --gameweek 38 --features-path "data/processed/v2/features.parquet" --data-version v2
+
+# Test v2 - évolution
+echo "=== TEST v2 EVOLUTION ==="
+python src\models\predict.py --season 2023-2024 --gameweek 38 --evolution --features-path "data/processed/v2/features.parquet" --data-version v2
