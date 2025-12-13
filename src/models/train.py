@@ -33,6 +33,9 @@ from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 import warnings
 warnings.filterwarnings('ignore')
 
+import dagshub
+dagshub.init(repo_owner="7a99ui", repo_name="premier_league_mlops", mlflow=True)
+
 
 class MLflowTracker:
     """Gestionnaire MLflow pour le tracking des expériences"""
@@ -503,25 +506,36 @@ class ModelSelector:
 
 
 def load_data(data_dir='data/processed/v1'):
-    """Charge les datasets train/val/test"""
-    train = pd.read_parquet(Path(data_dir) / 'train.parquet')
-    val = pd.read_parquet(Path(data_dir) / 'val.parquet')
-    test = pd.read_parquet(Path(data_dir) / 'test.parquet')
-    
+    """Charge les datasets train/val/test avec un chemin absolu basé sur la racine du projet"""
+
+    # 1) Calculer la racine du projet de façon fiable
+    project_root = Path(__file__).resolve().parents[2]
+
+    # 2) Construire le chemin complet vers le dossier de données
+    data_path = project_root / data_dir
+    print(f"📂 Loading data from: {data_path}")
+
+    # 3) Charger les fichiers parquet depuis le bon dossier
+    train = pd.read_parquet(data_path / 'train.parquet')
+    val   = pd.read_parquet(data_path / 'val.parquet')
+    test  = pd.read_parquet(data_path / 'test.parquet')
+
+    # 4) Définir les colonnes
     metadata_cols = ['season', 'team', 'gameweek']
     target_col = 'target_final_points'
-    
-    feature_cols = [col for col in train.columns 
-                   if col not in metadata_cols + [target_col]]
-    
-    X_train = train[feature_cols]
-    y_train = train[target_col]
-    X_val = val[feature_cols]
-    y_val = val[target_col]
-    X_test = test[feature_cols]
-    y_test = test[target_col]
-    
+
+    feature_cols = [
+        col for col in train.columns 
+        if col not in metadata_cols + [target_col]
+    ]
+
+    # 5) Séparer features & target
+    X_train, y_train = train[feature_cols], train[target_col]
+    X_val,   y_val   = val[feature_cols],   val[target_col]
+    X_test,  y_test  = test[feature_cols],  test[target_col]
+
     return X_train, y_train, X_val, y_val, X_test, y_test
+
 
 
 def _get_best_model(best_model_key, all_models, ensemble_builder):
