@@ -33,3 +33,55 @@ python src\models\predict.py --season 2023-2024 --gameweek 38 --features-path "d
 # Test v2 - évolution
 echo "=== TEST v2 EVOLUTION ==="
 python src\models\predict.py --season 2023-2024 --gameweek 38 --evolution --features-path "data/processed/v2/features.parquet" --data-version v2
+
+
+
+
+
+
+python train.py --data-dir data/processed/v1 --phase all --top-n 3 --register-models --auto-promote
+
+
+### 2️⃣ `--data-dir data/processed/v1`
+
+* Spécifie le **dossier contenant les jeux de données**.
+* Ici, `data/processed/v1` doit contenir trois fichiers :
+
+  * `train.parquet` → données d’entraînement
+  * `val.parquet` → données de validation
+  * `test.parquet` → données de test
+* Le script va charger ces fichiers pour entraîner et évaluer les modèles.
+
+---
+
+### 3️⃣ `--phase all`
+
+* Indique **quelle phase du pipeline exécuter**.
+* Options possibles :
+
+  * `baseline` → entraîner les modèles avec les paramètres par défaut.
+  * `finetune` → fine-tuning (optimisation d’hyperparamètres) sur les meilleurs modèles baseline.
+  * `ensemble` → créer des modèles d’ensemble (stacking / voting) à partir des meilleurs modèles.
+  * `all` → exécuter **toutes les phases** (baseline + fine-tuning + ensemble).
+
+---
+
+### 4️⃣ `--top-n 3`
+
+* Utilisé pendant la **phase de fine-tuning**.
+* Indique que le script doit **fine-tuner les 3 meilleurs modèles baseline** (triés par performance sur le set de validation).
+
+---
+
+### 5️⃣ `--register-models`
+
+* Flag pour **enregistrer tous les modèles entraînés dans MLflow Registry**.
+* Sans ce flag, seul le meilleur modèle pourrait être enregistré.
+
+---
+
+### 6️⃣ `--auto-promote`
+
+* Flag pour **promouvoir automatiquement le meilleur modèle vers le stage “Production”** si ses métriques sont meilleures que le modèle actuel en production.
+* Si tu passes `--no-auto-promote` à la place, le modèle sera juste enregistré mais restera en staging pour validation manuelle.
+

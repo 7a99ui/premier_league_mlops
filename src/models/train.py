@@ -1,22 +1,25 @@
 """
-Training Pipeline with MLflow Tracking
+Training Pipeline with MLflow Tracking and Model Registry
 
 Phases:
 1. Baseline: Train models with default parameters
 2. Fine-Tuning: Hyperparameter optimization
 3. Stacking: Ensemble methods
+4. Model Registry: Automatic promotion to Production
 """
 
 import pandas as pd
 import numpy as np
 import mlflow
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 from pathlib import Path
 import yaml
 import joblib
 from datetime import datetime
 import argparse
 import json
+import os
 
 # ML Libraries
 from sklearn.linear_model import Ridge, Lasso, ElasticNet
@@ -53,6 +56,9 @@ class MLflowTracker:
         if self.config.get('autolog', True):
             mlflow.sklearn.autolog(log_models=False)  # Disable automatic model logging to avoid conflicts
         
+        # Initialize MLflow client for registry operations
+        self.client = MlflowClient()
+        
         print(f"✅ MLflow configured:")
         print(f"   Tracking URI: {self.config['tracking_uri']}")
         print(f"   Experiment: {self.config['experiment_name']}")
@@ -78,22 +84,112 @@ class MLflowTracker:
                 else:
                     raise
     
-    def log_model(self, model, artifact_path="model"):
-        """Log le modèle"""
+    def log_model(self, model, artifact_path="model", registered_model_name=None, feature_names=None):
+        """Log le modèle et l'enregistre dans le Registry si spécifié"""
         try:
-            mlflow.sklearn.log_model(model, artifact_path=artifact_path)
-        except:
-            # Si le logging échoue, continuer quand même
-            pass
+            # Create signature with feature names if provided
+            signature = None
+            if feature_names:
+                from mlflow.models.signature import infer_signature
+                import numpy as np
+                # Create a dummy input with correct feature names
+                dummy_input = pd.DataFrame(np.zeros((1, len(feature_names))), columns=feature_names)
+                signature = infer_signature(dummy_input, np.array([0.0]))
+            
+            if registered_model_name:
+                mlflow.sklearn.log_model(
+                    model,
+                    artifact_path=artifact_path,
+                    registered_model_name=registered_model_name,
+                    signature=signature
+                )
+            else:
+                mlflow.sklearn.log_model(
+                    model, 
+                    artifact_path=artifact_path,
+                    signature=signature
+                )
+        except Exception as e:
+            print(f"⚠️  Warning: Could not log model: {e}")
+    
+    def get_production_model_metrics(self, model_name):
+        """Récupère les métriques du modèle en production"""
+        try:
+            production_versions = self.client.get_latest_versions(
+                name=model_name, 
+                stages=["Production"]
+            )
+            
+            if production_versions:
+                prod_version = production_versions[0]
+                run = self.client.get_run(prod_version.run_id)
+                return {
+                    'val_mae': run.data.metrics.get('val_mae', float('inf')),
+                    'val_rmse': run.data.metrics.get('val_rmse', float('inf')),
+                    'val_r2': run.data.metrics.get('val_r2', -float('inf')),
+                    'version': prod_version.version
+                }
+            return None
+        except Exception as e:
+            print(f"⚠️  No production model found: {e}")
+            return None
+    
+    def promote_to_production(self, model_name, version, archive_existing=True):
+        """Promote un modèle vers Production et archive l'ancien"""
+        try:
+            # Archive existing production models
+            if archive_existing:
+                production_versions = self.client.get_latest_versions(
+                    name=model_name,
+                    stages=["Production"]
+                )
+                for prod_model in production_versions:
+                    self.client.transition_model_version_stage(
+                        name=model_name,
+                        version=prod_model.version,
+                        stage="Archived"
+                    )
+                    print(f"   📦 Archived previous production model version {prod_model.version}")
+            
+            # Promote new model
+            self.client.transition_model_version_stage(
+                name=model_name,
+                version=version,
+                stage="Production"
+            )
+            print(f"   🚀 Promoted model version {version} to Production")
+            return True
+        except Exception as e:
+            print(f"⚠️  Could not promote model: {e}")
+            return False
+        
+    
+    def set_model_version_tag(self, model_name, version, key, value):
+        """Ajoute un tag à une version de modèle"""
+        try:
+            self.client.set_model_version_tag(model_name, version, key, value)
+            print(f"   🏷️  Tag ajouté: {key}={value}")
+        except Exception as e:
+            print(f"   ⚠️  Erreur lors de l'ajout du tag: {e}")
+            
+    def set_registered_model_tag(self, model_name, key, value):
+        """Ajoute un tag au modèle enregistré"""
+        try:
+            self.client.set_registered_model_tag(model_name, key, value)
+        except Exception as e:
+            print(f"   ⚠️  Erreur lors de l'ajout du tag: {e}")
+    
+    
 
 
 class BaselineTrainer:
     """Phase 1: Entraînement des modèles baseline"""
     
-    def __init__(self, mlflow_tracker):
+    def __init__(self, mlflow_tracker, register_models=False):
         self.tracker = mlflow_tracker
         self.models = {}
         self.results = {}
+        self.register_models = register_models
     
     def get_baseline_models(self):
         """Définit les modèles baseline avec paramètres par défaut"""
@@ -134,11 +230,22 @@ class BaselineTrainer:
         for model_name, model in models.items():
             print(f"🔄 Training {model_name}...")
             
-            # Start MLflow run
+            # Tags enrichis pour la run
+            run_tags = {
+                "phase": "baseline",
+                "model_type": model_name,
+                "model_family": self._get_model_family(model_name),
+                "framework": self._get_framework(model_name),
+                "experiment_type": "baseline_comparison",
+                "data_version": "v1",
+                "training_date": datetime.now().strftime("%Y-%m-%d"),
+            }
+
             with self.tracker.start_run(
                 run_name=f"baseline_{model_name}",
-                tags={"phase": "baseline", "model_type": model_name}
+                tags=run_tags
             ):
+            
                 # Train
                 model.fit(X_train, y_train)
                 
@@ -161,9 +268,24 @@ class BaselineTrainer:
                 
                 # Log metrics
                 self.tracker.log_metrics(metrics)
+                mlflow.set_tag("performance_tier", self._get_performance_tier(metrics['val_mae']))
+                mlflow.set_tag("is_best_baseline", False)
+
+
                 
-                # Log model
-                self.tracker.log_model(model)
+                # Log feature names with fixed filename
+                feature_names = X_train.columns.tolist() if hasattr(X_train, 'columns') else None
+                if feature_names:
+                    feature_path = "feature_names.json"
+                    with open(feature_path, 'w') as f:
+                        json.dump({'feature_names': feature_names}, f, indent=2)
+                    mlflow.log_artifact(feature_path, artifact_path="features")
+                    if os.path.exists(feature_path):
+                        os.remove(feature_path)
+                
+                # Log model (with optional registry and feature names)
+                registered_name = "PremierLeagueModel" if self.register_models else None
+                self.tracker.log_model(model, registered_model_name=registered_name, feature_names=feature_names)
                 
                 # Store results
                 self.models[model_name] = model
@@ -207,16 +329,54 @@ class BaselineTrainer:
         
         best_model = sorted_results[0][0]
         print(f"\n🏆 Best baseline model: {best_model}")
+        
+    def _get_model_family(self, model_name):
+        """Retourne la famille du modèle"""
+        families = {
+            'ridge': 'linear',
+            'lasso': 'linear',
+            'elastic_net': 'linear',
+            'random_forest': 'tree_ensemble',
+            'gradient_boosting': 'boosting',
+            'xgboost': 'boosting',
+            'lightgbm': 'boosting'
+        }
+        return families.get(model_name, 'unknown')
+    
+    def _get_framework(self, model_name):
+        """Retourne le framework utilisé"""
+        frameworks = {
+            'ridge': 'sklearn',
+            'lasso': 'sklearn',
+            'elastic_net': 'sklearn',
+            'random_forest': 'sklearn',
+            'gradient_boosting': 'sklearn',
+            'xgboost': 'xgboost',
+            'lightgbm': 'lightgbm'
+        }
+        return frameworks.get(model_name, 'sklearn')
+    
+    def _get_performance_tier(self, mae):
+        """Classe la performance en tiers"""
+        if mae < 5.0:
+            return "excellent"
+        elif mae < 7.0:
+            return "good"
+        elif mae < 10.0:
+            return "average"
+        else:
+            return "poor"
 
 
 class FineTuner:
     """Phase 2: Fine-tuning avec hyperparameter optimization"""
     
-    def __init__(self, mlflow_tracker, custom_hyperparameters=None):
+    def __init__(self, mlflow_tracker, custom_hyperparameters=None, register_models=False):
         self.tracker = mlflow_tracker
         self.best_models = {}
         self.best_params = {}
         self.custom_hyperparameters = custom_hyperparameters or {}
+        self.register_models = register_models
     
     def get_param_distributions(self):
         """Définit les distributions de paramètres pour chaque modèle"""
@@ -277,10 +437,22 @@ class FineTuner:
             print(f"   ⚠️  No hyperparameters defined for {model_name}, skipping...")
             return None
         
+        # Tags enrichis
+        run_tags = {
+            "phase": "fine_tuning",
+            "model_type": model_name,
+            "optimization_method": "randomized_search",
+            "n_iterations": str(n_iter),
+            "cv_folds": str(cv),
+            "training_date": datetime.now().strftime("%Y-%m-%d"),
+        }
+
         with self.tracker.start_run(
             run_name=f"finetuned_{model_name}",
-            tags={"phase": "fine_tuning", "model_type": model_name}
+            tags=run_tags
         ):
+        
+
             search = RandomizedSearchCV(
                 base_model,
                 param_distributions=param_dist,
@@ -316,7 +488,24 @@ class FineTuner:
                 **search.best_params_
             })
             self.tracker.log_metrics(metrics)
-            self.tracker.log_model(best_model)
+            mlflow.set_tag("performance_tier", self._get_performance_tier(metrics['val_mae']))
+            mlflow.set_tag("hyperparameters_tuned", str(len(search.best_params_)))
+
+
+            
+            # Log feature names with fixed filename
+            feature_names = X_train.columns.tolist() if hasattr(X_train, 'columns') else None
+            if feature_names:
+                feature_path = "feature_names.json"
+                with open(feature_path, 'w') as f:
+                    json.dump({'feature_names': feature_names}, f, indent=2)
+                mlflow.log_artifact(feature_path, artifact_path="features")
+                if os.path.exists(feature_path):
+                    os.remove(feature_path)
+            
+            # Log model (with optional registry and feature names)
+            registered_name = "PremierLeagueModel" if self.register_models else None
+            self.tracker.log_model(best_model, registered_model_name=registered_name, feature_names=feature_names)
             
             self.best_models[model_name] = best_model
             self.best_params[model_name] = search.best_params_
@@ -351,14 +540,27 @@ class FineTuner:
                 results[model_name] = result
         
         return results
+    
+    def _get_performance_tier(self, mae):
+        """Classe la performance en tiers"""
+        if mae < 5.0:
+            return "excellent"
+        elif mae < 7.0:
+            return "good"
+        elif mae < 10.0:
+            return "average"
+        else:
+            return "poor"
+    
 
 
 class EnsembleBuilder:
     """Phase 3: Création d'ensembles (Stacking + Voting)"""
     
-    def __init__(self, mlflow_tracker):
+    def __init__(self, mlflow_tracker, register_models=False):
         self.tracker = mlflow_tracker
         self.ensemble_models = {}
+        self.register_models = register_models
     
     def create_stacking_ensemble(self, base_models, X_train, y_train, X_val, y_val):
         """Crée un modèle de stacking"""
@@ -372,10 +574,24 @@ class EnsembleBuilder:
             n_jobs=-1
         )
         
+        
+        
+        # Tags enrichis pour ensemble
+        run_tags = {
+            "phase": "ensemble",
+            "ensemble_type": "stacking",
+            "n_base_models": str(len(base_models)),
+            "base_models": ",".join(base_models.keys()),
+            "meta_learner": "Ridge",
+            "training_date": datetime.now().strftime("%Y-%m-%d"),
+        }
+
         with self.tracker.start_run(
             run_name="stacking_ensemble",
-            tags={"phase": "ensemble", "ensemble_type": "stacking"}
+            tags=run_tags
         ):
+        
+
             stacking.fit(X_train, y_train)
             
             y_train_pred = stacking.predict(X_train)
@@ -398,7 +614,24 @@ class EnsembleBuilder:
             })
             
             self.tracker.log_metrics(metrics)
-            self.tracker.log_model(stacking)
+            mlflow.set_tag("performance_tier", self._get_performance_tier(metrics['val_mae']))
+            mlflow.set_tag("ensemble_complexity", "high")
+
+
+            
+            # Log feature names with fixed filename
+            feature_names = X_train.columns.tolist() if hasattr(X_train, 'columns') else None
+            if feature_names:
+                feature_path = "feature_names.json"
+                with open(feature_path, 'w') as f:
+                    json.dump({'feature_names': feature_names}, f, indent=2)
+                mlflow.log_artifact(feature_path, artifact_path="features")
+                if os.path.exists(feature_path):
+                    os.remove(feature_path)
+            
+            # Log model (with optional registry and feature names)
+            registered_name = "PremierLeagueModel" if self.register_models else None
+            self.tracker.log_model(stacking, registered_model_name=registered_name, feature_names=feature_names)
             
             print(f"   ✓ Stacking Val MAE: {metrics['val_mae']:.2f}")
             
@@ -412,10 +645,22 @@ class EnsembleBuilder:
         estimators = [(name, model) for name, model in base_models.items()]
         voting = VotingRegressor(estimators=estimators, n_jobs=-1)
         
+        # Tags enrichis pour ensemble
+        run_tags = {
+            "phase": "ensemble",
+            "ensemble_type": "voting",
+            "n_base_models": str(len(base_models)),
+            "base_models": ",".join(base_models.keys()),
+            "meta_learner": "Ridge",
+            "training_date": datetime.now().strftime("%Y-%m-%d"),
+        }
+
         with self.tracker.start_run(
             run_name="voting_ensemble",
-            tags={"phase": "ensemble", "ensemble_type": "voting"}
+            tags=run_tags
         ):
+        
+
             voting.fit(X_train, y_train)
             
             y_train_pred = voting.predict(X_train)
@@ -437,7 +682,24 @@ class EnsembleBuilder:
             })
             
             self.tracker.log_metrics(metrics)
-            self.tracker.log_model(voting)
+            mlflow.set_tag("performance_tier", self._get_performance_tier(metrics['val_mae']))
+            mlflow.set_tag("ensemble_complexity", "high")
+
+
+            
+            # Log feature names with fixed filename
+            feature_names = X_train.columns.tolist() if hasattr(X_train, 'columns') else None
+            if feature_names:
+                feature_path = "feature_names.json"
+                with open(feature_path, 'w') as f:
+                    json.dump({'feature_names': feature_names}, f, indent=2)
+                mlflow.log_artifact(feature_path, artifact_path="features")
+                if os.path.exists(feature_path):
+                    os.remove(feature_path)
+            
+            # Log model (with optional registry and feature names)
+            registered_name = "PremierLeagueModel" if self.register_models else None
+            self.tracker.log_model(voting, registered_model_name=registered_name, feature_names=feature_names)
             
             print(f"   ✓ Voting Val MAE: {metrics['val_mae']:.2f}")
             
@@ -463,6 +725,17 @@ class EnsembleBuilder:
         results['voting'] = vote_metrics
         
         return results
+    
+    def _get_performance_tier(self, mae):
+        """Classe la performance en tiers"""
+        if mae < 5.0:
+            return "excellent"
+        elif mae < 7.0:
+            return "good"
+        elif mae < 10.0:
+            return "average"
+        else:
+            return "poor"
 
 
 class ModelSelector:
@@ -503,6 +776,45 @@ class ModelSelector:
         print(f"   Val R²:   {best_metrics['val_r2']:.4f}")
         
         return best_model_key, best_metrics
+    
+    def compare_with_production(self, new_metrics, model_name="PremierLeagueModel"):
+        """Compare le nouveau modèle avec celui en production"""
+        print(f"\n{'='*70}")
+        print("PRODUCTION MODEL COMPARISON")
+        print(f"{'='*70}\n")
+        
+        prod_metrics = self.tracker.get_production_model_metrics(model_name)
+        
+        if prod_metrics is None:
+            print("📝 No production model found. This will be the first production model.")
+            return True
+        
+        print(f"Current Production Model (v{prod_metrics['version']}):")
+        print(f"   Val MAE:  {prod_metrics['val_mae']:.2f} points")
+        print(f"   Val RMSE: {prod_metrics['val_rmse']:.2f} points")
+        print(f"   Val R²:   {prod_metrics['val_r2']:.4f}")
+        
+        print(f"\nNew Model:")
+        print(f"   Val MAE:  {new_metrics['val_mae']:.2f} points")
+        print(f"   Val RMSE: {new_metrics['val_rmse']:.2f} points")
+        print(f"   Val R²:   {new_metrics['val_r2']:.4f}")
+        
+        mae_improvement = prod_metrics['val_mae'] - new_metrics['val_mae']
+        r2_improvement = new_metrics['val_r2'] - prod_metrics['val_r2']
+        
+        print(f"\nImprovement:")
+        print(f"   MAE:  {mae_improvement:+.2f} points ({mae_improvement/prod_metrics['val_mae']*100:+.2f}%)")
+        print(f"   R²:   {r2_improvement:+.4f}")
+        
+        # Decision: promote if MAE is better
+        should_promote = new_metrics['val_mae'] < prod_metrics['val_mae']
+        
+        if should_promote:
+            print(f"\n✅ New model is BETTER! Will promote to production.")
+        else:
+            print(f"\n❌ Current production model is still BETTER. Will not promote.")
+        
+        return should_promote
 
 
 def load_data(data_dir='data/processed/v1'):
@@ -535,7 +847,6 @@ def load_data(data_dir='data/processed/v1'):
     X_test,  y_test  = test[feature_cols],  test[target_col]
 
     return X_train, y_train, X_val, y_val, X_test, y_test
-
 
 
 def _get_best_model(best_model_key, all_models, ensemble_builder):
@@ -611,15 +922,144 @@ def save_best_model(model, model_name, metrics, X_test, y_test,
     return model_path
 
 
+
+def register_and_promote_model(tracker, model, model_name, best_metrics, 
+                               X_test, y_test, auto_promote=True):
+    """Enregistre le modèle dans MLflow Registry et le promote si nécessaire"""
+    print(f"\n{'='*70}")
+    print("MODEL REGISTRY & PROMOTION")
+    print(f"{'='*70}\n")
+    
+    # Evaluate on test set
+    y_test_pred = model.predict(X_test)
+    test_metrics = {
+        'test_mae': float(mean_absolute_error(y_test, y_test_pred)),
+        'test_rmse': float(np.sqrt(mean_squared_error(y_test, y_test_pred))),
+        'test_r2': float(r2_score(y_test, y_test_pred))
+    }
+    
+    # Get feature names
+    feature_names = X_test.columns.tolist() if hasattr(X_test, 'columns') else None
+    
+    # Tags enrichis pour le modèle de production
+    production_tags = {
+        "phase": "production",
+        "model_type": model_name,
+        "deployment_ready": "true",
+        "validation_status": "passed",
+        "training_date": datetime.now().strftime("%Y-%m-%d"),
+        "test_mae": f"{test_metrics['test_mae']:.2f}",
+        "test_r2": f"{test_metrics['test_r2']:.4f}",
+    }
+    
+    # Start a new run for the final model registration
+    with tracker.start_run(
+        run_name=f"production_candidate_{model_name}",
+        tags=production_tags
+    ):
+        # Log all metrics (validation + test)
+        all_metrics = {**best_metrics, **test_metrics}
+        tracker.log_metrics(all_metrics)
+        
+        # Log model parameters
+        tracker.log_params({
+            'model_name': model_name,
+            'phase': 'production',
+            'n_features': X_test.shape[1]
+        })
+        
+        # Log feature names as artifact with fixed filename
+        if feature_names:
+            feature_path = "feature_names.json"
+            with open(feature_path, 'w') as f:
+                json.dump({'feature_names': feature_names}, f, indent=2)
+            mlflow.log_artifact(feature_path, artifact_path="features")
+            if os.path.exists(feature_path):
+                os.remove(feature_path)
+        
+        # Register model in MLflow Registry with signature
+        print("📝 Registering model in MLflow Registry...")
+        
+        # Create signature with feature names
+        from mlflow.models.signature import infer_signature
+        signature = None
+        if feature_names:
+            dummy_input = pd.DataFrame(np.zeros((1, len(feature_names))), columns=feature_names)
+            signature = infer_signature(dummy_input, np.array([0.0]))
+        
+        model_uri = mlflow.sklearn.log_model(
+            model,
+            artifact_path="model",
+            registered_model_name="PremierLeagueModel",
+            signature=signature
+        ).model_uri
+        
+        print(f"   ✓ Model registered: {model_uri}")
+        
+        # Get the version number of the newly registered model
+        model_versions = tracker.client.search_model_versions(f"name='PremierLeagueModel'")
+        model_version = model_versions[0].version
+        
+        print(f"   ✓ Model version: {model_version}")
+        
+        # Ajouter des tags à la version du modèle
+        print("🏷️  Adding tags to model version...")
+        tracker.set_model_version_tag("PremierLeagueModel", model_version, "model_type", model_name)
+        tracker.set_model_version_tag("PremierLeagueModel", model_version, "val_mae", f"{best_metrics['val_mae']:.2f}")
+        tracker.set_model_version_tag("PremierLeagueModel", model_version, "test_mae", f"{test_metrics['test_mae']:.2f}")
+        tracker.set_model_version_tag("PremierLeagueModel", model_version, "training_date", datetime.now().strftime("%Y-%m-%d"))
+        tracker.set_model_version_tag("PremierLeagueModel", model_version, "deployment_status", "candidate")
+    
+    # Compare with production model and decide promotion
+    if auto_promote:
+        selector = ModelSelector(tracker)
+        should_promote = selector.compare_with_production(
+            best_metrics, 
+            model_name="PremierLeagueModel"
+        )
+        
+        if should_promote:
+            success = tracker.promote_to_production(
+                model_name="PremierLeagueModel",
+                version=model_version,
+                archive_existing=True
+            )
+            if success:
+                # Mettre à jour le tag de déploiement
+                tracker.set_model_version_tag("PremierLeagueModel", model_version, "deployment_status", "production")
+                tracker.set_model_version_tag("PremierLeagueModel", model_version, "promoted_date", datetime.now().strftime("%Y-%m-%d"))
+                print(f"\n✅ Model promoted to Production successfully!")
+            else:
+                print(f"\n⚠️  Failed to promote model to Production")
+        else:
+            print(f"\n📦 Model registered but not promoted (current production is better)")
+            # Stage as "Staging" instead
+            tracker.client.transition_model_version_stage(
+                name="PremierLeagueModel",
+                version=model_version,
+                stage="Staging"
+            )
+            tracker.set_model_version_tag("PremierLeagueModel", model_version, "deployment_status", "staging")
+            print(f"   ✓ Model moved to Staging for review")
+    
+    return model_version, test_metrics
+
+
 def main():
     """Main training pipeline"""
-    parser = argparse.ArgumentParser(description='Full Training Pipeline')
+    parser = argparse.ArgumentParser(description='Full Training Pipeline with MLflow Registry')
     parser.add_argument('--data-dir', default='data/processed/v1',
                        help='Directory with train/val/test data')
     parser.add_argument('--phase', choices=['baseline', 'finetune', 'ensemble', 'all'],
                        default='all', help='Which phase to run')
     parser.add_argument('--top-n', type=int, default=3,
                        help='Number of top models to fine-tune')
+    parser.add_argument('--register-models', action='store_true',
+                       help='Register all models in MLflow Registry (not just the best)')
+    parser.add_argument('--auto-promote', action='store_true', default=True,
+                       help='Automatically promote best model to Production if better')
+    parser.add_argument('--no-auto-promote', action='store_false', dest='auto_promote',
+                       help='Disable automatic promotion to Production')
     
     args = parser.parse_args()
     
@@ -642,7 +1082,7 @@ def main():
     
     # Phase 1: Baseline
     if args.phase in ['baseline', 'all']:
-        baseline_trainer = BaselineTrainer(tracker)
+        baseline_trainer = BaselineTrainer(tracker, register_models=args.register_models)
         baseline_models, baseline_results = baseline_trainer.train_all_baselines(
             X_train, y_train, X_val, y_val
         )
@@ -660,7 +1100,11 @@ def main():
                 'ridge': {'alpha': [0.01, 0.1, 1.0]}
             }
             
-            finetuner = FineTuner(tracker, custom_hyperparameters=custom_hyperparams)
+            finetuner = FineTuner(
+                tracker, 
+                custom_hyperparameters=custom_hyperparams,
+                register_models=args.register_models
+            )
             finetuned_results = finetuner.fine_tune_top_models(
                 baseline_results, baseline_models,
                 X_train, y_train, X_val, y_val, top_n=args.top_n
@@ -679,24 +1123,26 @@ def main():
                 key=lambda x: baseline_results.get(x[0], {'val_mae': float('inf')})['val_mae']
             )[:3])
             
-            ensemble_builder = EnsembleBuilder(tracker)
+            ensemble_builder = EnsembleBuilder(tracker, register_models=args.register_models)
             ensemble_results = ensemble_builder.build_ensembles(
                 top_models, X_train, y_train, X_val, y_val
             )
             all_results['ensemble'] = ensemble_results
             all_models.update(ensemble_builder.ensemble_models)
     
-    # Final model selection and saving
+    # Final model selection, registration and promotion
     if args.phase == 'all':
         selector = ModelSelector(tracker)
         best_model_key, best_metrics = selector.select_best_model(
             all_results, all_models
         )
         
-        print(f"\n💾 Saving best model...")
+        # Get the best model
         best_model = _get_best_model(best_model_key, all_models, ensemble_builder)
         
         if best_model:
+            # Save locally (backward compatibility)
+            print(f"\n💾 Saving best model locally...")
             model_path = save_best_model(
                 model=best_model,
                 model_name=best_model_key,
@@ -704,11 +1150,33 @@ def main():
                 X_test=X_test,
                 y_test=y_test
             )
+            
+            # Register in MLflow and promote if better
+            print(f"\n🚀 Registering and promoting in MLflow Registry...")
+            model_version, test_metrics = register_and_promote_model(
+                tracker=tracker,
+                model=best_model,
+                model_name=best_model_key,
+                best_metrics=best_metrics,
+                X_test=X_test,
+                y_test=y_test,
+                auto_promote=args.auto_promote
+            )
+            
+            print(f"\n{'='*70}")
+            print("📊 FINAL TEST SET PERFORMANCE")
+            print(f"{'='*70}")
+            print(f"   MAE:  {test_metrics['test_mae']:.2f} points")
+            print(f"   RMSE: {test_metrics['test_rmse']:.2f} points")
+            print(f"   R²:   {test_metrics['test_r2']:.4f}")
+            print(f"{'='*70}")
         else:
             print("⚠️  Could not retrieve best model for saving")
     
     print(f"\n✅ Training pipeline complete!")
-    print(f"   View results: mlflow ui --port 5000")
+    print(f"\n💡 To load the production model in your prediction pipeline:")
+    print(f"   import mlflow")
+    print(f"   model = mlflow.sklearn.load_model('models:/PremierLeagueModel/Production')")
 
 
 if __name__ == '__main__':

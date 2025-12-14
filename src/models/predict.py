@@ -1,7 +1,7 @@
 """
-Prediction Pipeline - Version corrigée SANS DUPLICATIONS
+Prediction Pipeline with MLflow Registry Support
 Fait des prédictions du classement final à partir d'un gameweek donné
-Avec support pour le scaling et l'ordre correct des features
+Avec support pour le scaling, l'ordre correct des features et MLflow Registry
 """
 
 import pandas as pd
@@ -12,6 +12,7 @@ from datetime import datetime
 import json
 import sys
 import joblib
+import mlflow
 
 # Ajouter le dossier parent au path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -22,32 +23,45 @@ from src.models.utils import ModelPredictor
 class PredictionPipeline:
     """Pipeline pour générer et sauvegarder des prédictions"""
     
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, use_mlflow=True, mlflow_stage="Production"):
         """
         Args:
-            model_path: Chemin vers un modèle spécifique. Si None, utilise le dernier.
+            model_path: Chemin vers un modèle local spécifique. Si None, utilise MLflow ou latest.
+            use_mlflow: Si True, charge depuis MLflow Registry
+            mlflow_stage: Stage du modèle MLflow (Production, Staging, Archived)
         """
-        self.predictor = ModelPredictor(model_path)
+        self.predictor = ModelPredictor(
+            model_path=model_path,
+            use_mlflow=use_mlflow,
+            mlflow_stage=mlflow_stage
+        )
+        
         # Utiliser le chemin de base du projet
         self.predictions_dir = Path(__file__).parent.parent.parent / 'predictions'
         self.predictions_dir.mkdir(exist_ok=True)
         self.features_cache = None  # Cache pour les features
         
-        # ===== CORRECTION 1: Charger le scaler depuis v1 =====
+        # Log model source
+        model_source = self.predictor.metadata.get('source', 'unknown')
+        print(f"🔍 Model source: {model_source}")
+        if model_source == 'mlflow_registry':
+            print(f"   Stage: {self.predictor.metadata.get('stage', 'unknown')}")
+            print(f"   Version: {self.predictor.metadata.get('version', 'unknown')}")
+        
+        # ===== Charger le scaler depuis v1 =====
         self.scaler = None
         project_root = self._get_project_root()
         
-        # Votre scaler est dans v1, pas dans models/production
         scaler_path_v1 = project_root / 'data' / 'processed' / 'v1' / 'scaler.joblib'
         
         if scaler_path_v1.exists():
             try:
                 self.scaler = joblib.load(scaler_path_v1)
-                print(f"✅ Scaler v1 loaded from: {scaler_path_v1}")
+                print(f"✅ Scaler loaded from: {scaler_path_v1}")
             except Exception as e:
-                print(f"⚠️  Failed to load scaler v1: {e}")
+                print(f"⚠️  Failed to load scaler: {e}")
         else:
-            print(f"❌ Scaler v1 not found at: {scaler_path_v1}")
+            print(f"⚠️  Scaler not found at: {scaler_path_v1}")
             print(f"   Predictions may be inaccurate without scaling!")
     
     def _get_project_root(self):
@@ -57,10 +71,13 @@ class PredictionPipeline:
     def load_all_features(self, data_version='v1'):
         """
         Charge toutes les features SANS DUPLICATIONS
-        CORRECTION: Utilise UNIQUEMENT features.parquet
+        Utilise UNIQUEMENT features.parquet
         
         Args:
-            data_version: Version des données ('v1' ou 'v2')
+            data_version: Version des données ('v1', 'v2', etc.)
+        
+        Returns:
+            DataFrame: Données combinées sans duplications
         """
         if self.features_cache is not None:
             return self.features_cache
@@ -70,7 +87,7 @@ class PredictionPipeline:
         project_root = self._get_project_root()
         data_dir = project_root / 'data' / 'processed' / data_version
         
-        # ===== CORRECTION: Charger SEULEMENT features.parquet =====
+        # Charger SEULEMENT features.parquet
         features_file = data_dir / 'features.parquet'
         
         if features_file.exists():
@@ -83,7 +100,7 @@ class PredictionPipeline:
                           if col not in ['team', 'season', 'gameweek', 'target_final_points']]
             print(f"  Features: {len(feature_cols)}")
             
-            # Vérifier qu'il n'y a pas de duplications (debug)
+            # Vérifier qu'il n'y a pas de duplications
             key_cols = ['team', 'season', 'gameweek']
             if all(col in combined_data.columns for col in key_cols):
                 duplicates = combined_data.duplicated(subset=key_cols).sum()
@@ -96,17 +113,17 @@ class PredictionPipeline:
                     print(f"  ✅ Données nettoyées: {len(combined_data):,} lignes")
             
             # Vérifier la compatibilité avec le modèle
-            model_features = self.predictor.metadata.get('feature_names', [])
+            model_features = self._get_model_feature_names()
             if model_features:
                 missing_features = set(model_features) - set(combined_data.columns)
                 if missing_features:
-                    print(f"  ⚠️  Features manquantes: {missing_features}")
+                    print(f"  ⚠️  Features manquantes: {len(missing_features)} features")
             
             self.features_cache = combined_data
             return combined_data
         
         else:
-            # ===== FALLBACK: Si features.parquet n'existe pas =====
+            # FALLBACK: Si features.parquet n'existe pas
             print(f"  ⚠️  features.parquet non trouvé, chargement train+val+test...")
             
             possible_paths = [
@@ -154,6 +171,17 @@ class PredictionPipeline:
             self.features_cache = combined_data
             return combined_data
     
+    def _get_model_feature_names(self):
+        """Récupère les noms des features depuis les métadonnées du modèle"""
+        # Try different metadata keys depending on source
+        if 'feature_names' in self.predictor.metadata:
+            return self.predictor.metadata['feature_names']
+        elif 'params' in self.predictor.metadata:
+            # MLflow model might not have explicit feature names
+            return []
+        else:
+            return []
+    
     def _prepare_features_for_prediction(self, features_df):
         """
         Prépare les features pour la prédiction (ordre + scaling)
@@ -167,7 +195,7 @@ class PredictionPipeline:
         print(f"🔍 Préparation des features pour la prédiction...")
         
         # 1. Obtenir l'ordre exact des features d'entraînement
-        feature_order = self.predictor.metadata.get('feature_names', [])
+        feature_order = self._get_model_feature_names()
         
         if not feature_order:
             print(f"⚠️  Pas d'information sur l'ordre des features dans les métadonnées")
@@ -176,7 +204,7 @@ class PredictionPipeline:
         
         print(f"   Nombre de features attendues: {len(feature_order)}")
         
-        # ===== CORRECTION 2: Créer les features manquantes au lieu de lever une exception =====
+        # 2. Créer les features manquantes au lieu de lever une exception
         missing_features = set(feature_order) - set(features_df.columns)
         if missing_features:
             print(f"   ⚠️  Features manquantes: {len(missing_features)}")
@@ -226,7 +254,7 @@ class PredictionPipeline:
             season: Saison (ex: '2024-2025')
             gameweek: Gameweek actuel (ex: 15)
             features_path: Chemin vers les features. Si None, cherche automatiquement
-            data_version: Version des données ('v1' ou 'v2')
+            data_version: Version des données ('v1', 'v2', etc.)
         
         Returns:
             DataFrame: Prédictions avec classement
@@ -236,9 +264,25 @@ class PredictionPipeline:
         print(f"{'='*70}")
         print(f"Season: {season}")
         print(f"After Gameweek: {gameweek}")
-        print(f"Model: {self.predictor.metadata['model_name']}")
-        print(f"Val MAE: {self.predictor.metadata['metrics']['val_mae']:.2f}")
-        print(f"Test MAE: {self.predictor.metadata['metrics']['test_mae']:.2f}")
+        
+        # Display model info
+        model_name = self.predictor.metadata.get('model_name', 'Unknown')
+        model_source = self.predictor.metadata.get('source', 'unknown')
+        
+        print(f"Model: {model_name}")
+        print(f"Source: {model_source}")
+        
+        if model_source == 'mlflow_registry':
+            print(f"Stage: {self.predictor.metadata.get('stage', 'unknown')}")
+            print(f"Version: {self.predictor.metadata.get('version', 'unknown')}")
+        
+        # Display metrics if available
+        metrics = self.predictor.metadata.get('metrics', {})
+        if 'val_mae' in metrics:
+            print(f"Val MAE: {metrics['val_mae']:.2f}")
+        if 'test_mae' in metrics:
+            print(f"Test MAE: {metrics['test_mae']:.2f}")
+        
         print(f"{'='*70}\n")
         
         # Charger les features
@@ -272,10 +316,9 @@ class PredictionPipeline:
             
             raise ValueError(f"No data found for season {season} at gameweek {gameweek}")
         
-        # ===== CORRECTION 3: VÉRIFIER ET SUPPRIMER LES DUPLICATIONS =====
+        # Vérifier et supprimer les duplications
         print(f"📊 Données brutes: {len(season_data)} lignes")
         
-        # Vérifier les duplications par équipe
         duplicates = season_data.duplicated(subset=['team'], keep=False)
         if duplicates.any():
             print(f"⚠️  DUPLICATIONS DÉTECTÉES: {duplicates.sum()} lignes")
@@ -297,6 +340,8 @@ class PredictionPipeline:
         # Préparer les features pour la prédiction
         X_prepared = self._prepare_features_for_prediction(season_data)
         
+
+        
         # Faire les prédictions
         print(f"\n🎯 Génération des prédictions...")
         predictions = self.predictor.model.predict(X_prepared)
@@ -310,7 +355,7 @@ class PredictionPipeline:
             'predicted_final_points': predictions
         })
         
-        # Pour avoir le classement, prendre la prédiction la plus récente par équipe
+        # Calculer le classement
         results['predicted_rank'] = results['predicted_final_points'].rank(
             ascending=False, method='min'
         ).astype(int)
@@ -319,8 +364,14 @@ class PredictionPipeline:
         results['season'] = season
         results['prediction_gameweek'] = gameweek
         results['prediction_timestamp'] = datetime.now().isoformat()
-        results['model_name'] = self.predictor.metadata['model_name']
-        results['model_timestamp'] = self.predictor.metadata['timestamp']
+        results['model_name'] = model_name
+        results['model_source'] = model_source
+        
+        if model_source == 'mlflow_registry':
+            results['model_version'] = self.predictor.metadata.get('version', 'unknown')
+            results['model_stage'] = self.predictor.metadata.get('stage', 'unknown')
+        elif 'timestamp' in self.predictor.metadata:
+            results['model_timestamp'] = self.predictor.metadata['timestamp']
         
         # Si disponible, ajouter le classement réel
         if 'target_final_points' in season_data.columns:
@@ -361,6 +412,9 @@ class PredictionPipeline:
             predictions: DataFrame avec prédictions
             season: Saison
             gameweek: Gameweek
+        
+        Returns:
+            Path: Chemin du fichier sauvegardé
         """
         # Créer un nom de fichier unique
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -425,7 +479,7 @@ class PredictionPipeline:
             gameweek: Gameweek
             features_path: Chemin vers les features
             display: Afficher les résultats
-            data_version: Version des données ('v1' ou 'v2')
+            data_version: Version des données ('v1', 'v2', etc.)
         
         Returns:
             DataFrame: Prédictions
@@ -470,7 +524,8 @@ class PredictionPipeline:
         return predictions
 
 
-def predict_evolution(season, start_gw, end_gw, features_path=None, data_version='v1'):
+def predict_evolution(season, start_gw, end_gw, features_path=None, data_version='v1',
+                     use_mlflow=True, mlflow_stage="Production"):
     """
     Prédit l'évolution du classement sur plusieurs gameweeks
     
@@ -480,6 +535,8 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
         end_gw: Gameweek de fin
         features_path: Chemin vers les features
         data_version: Version des données
+        use_mlflow: Utiliser MLflow Registry
+        mlflow_stage: Stage du modèle MLflow
     
     Returns:
         dict: Prédictions pour chaque gameweek
@@ -491,7 +548,7 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
     print(f"Gameweeks: {start_gw} to {end_gw}")
     print(f"{'='*70}\n")
     
-    pipeline = PredictionPipeline()
+    pipeline = PredictionPipeline(use_mlflow=use_mlflow, mlflow_stage=mlflow_stage)
     evolution = {}
     
     for gw in range(start_gw, end_gw + 1):
@@ -547,28 +604,46 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Predict Premier League Final Standings')
+    parser = argparse.ArgumentParser(description='Predict Premier League Final Standings with MLflow Support')
     parser.add_argument('--season', required=True, help='Season (e.g., 2024-2025)')
     parser.add_argument('--gameweek', type=int, required=True, 
                        help='Current gameweek (e.g., 15)')
     parser.add_argument('--features-path', default=None,
                        help='Path to features file')
     parser.add_argument('--model-path', default=None,
-                       help='Path to specific model (default: latest)')
+                       help='Path to specific local model (default: uses MLflow Production)')
     parser.add_argument('--data-version', default='v1',
-                   help='Data version to use (v1, v2, v3, etc. - default: v1)')
+                       help='Data version to use (v1, v2, etc. - default: v1)')
     parser.add_argument('--evolution', action='store_true',
                        help='Predict evolution from gameweek 10 to current')
+    parser.add_argument('--no-mlflow', action='store_true',
+                       help='Disable MLflow Registry, use local models only')
+    parser.add_argument('--mlflow-stage', default='Production',
+                       choices=['Production', 'Staging', 'Archived'],
+                       help='MLflow model stage (default: Production)')
     
     args = parser.parse_args()
     
+    use_mlflow = not args.no_mlflow
+    
     if args.evolution:
         # Prédire l'évolution
-        predict_evolution(args.season, 10, args.gameweek, 
-                         args.features_path, args.data_version)
+        predict_evolution(
+            args.season, 
+            10, 
+            args.gameweek, 
+            args.features_path, 
+            args.data_version,
+            use_mlflow=use_mlflow,
+            mlflow_stage=args.mlflow_stage
+        )
     else:
         # Prédiction simple
-        pipeline = PredictionPipeline(args.model_path)
+        pipeline = PredictionPipeline(
+            model_path=args.model_path,
+            use_mlflow=use_mlflow,
+            mlflow_stage=args.mlflow_stage
+        )
         predictions = pipeline.predict_and_save(
             args.season, 
             args.gameweek, 
@@ -577,6 +652,13 @@ def main():
         )
     
     print(f"\n✅ Prediction complete!")
+    
+    if use_mlflow:
+        print(f"\n💡 Using MLflow Registry model (stage: {args.mlflow_stage})")
+        print(f"   To use local model instead: add --no-mlflow flag")
+    else:
+        print(f"\n💡 Using local model")
+        print(f"   To use MLflow Registry: remove --no-mlflow flag")
 
 
 if __name__ == '__main__':
