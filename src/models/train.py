@@ -219,7 +219,7 @@ class BaselineTrainer:
             )
         }
     
-    def train_all_baselines(self, X_train, y_train, X_val, y_val):
+    def train_all_baselines(self, X_train, y_train, X_val, y_val, data_version='v1'):
         """Entraîne tous les modèles baseline"""
         print(f"\n{'='*70}")
         print("PHASE 1: BASELINE MODELS")
@@ -237,7 +237,7 @@ class BaselineTrainer:
                 "model_family": self._get_model_family(model_name),
                 "framework": self._get_framework(model_name),
                 "experiment_type": "baseline_comparison",
-                "data_version": "v1",
+                "data_version": data_version,
                 "training_date": datetime.now().strftime("%Y-%m-%d"),
             }
 
@@ -263,7 +263,8 @@ class BaselineTrainer:
                 self.tracker.log_params({
                     'model_type': model_name,
                     'phase': 'baseline',
-                    'n_features': X_train.shape[1]
+                    'n_features': X_train.shape[1],
+                    'data_version': data_version
                 })
                 
                 # Log metrics
@@ -427,7 +428,7 @@ class FineTuner:
         return default_params
     
     def fine_tune_model(self, model_name, base_model, X_train, y_train, 
-                       X_val, y_val, n_iter=20, cv=3):
+                       X_val, y_val, n_iter=20, cv=3, data_version='v1'):
         """Fine-tune un modèle spécifique"""
         print(f"\n🔧 Fine-tuning {model_name}...")
         
@@ -444,6 +445,7 @@ class FineTuner:
             "optimization_method": "randomized_search",
             "n_iterations": str(n_iter),
             "cv_folds": str(cv),
+            "data_version": data_version,
             "training_date": datetime.now().strftime("%Y-%m-%d"),
         }
 
@@ -485,6 +487,7 @@ class FineTuner:
                 'phase': 'fine_tuning',
                 'n_iter': n_iter,
                 'cv_folds': cv,
+                'data_version': data_version,
                 **search.best_params_
             })
             self.tracker.log_metrics(metrics)
@@ -516,7 +519,7 @@ class FineTuner:
             return best_model, metrics
     
     def fine_tune_top_models(self, baseline_results, baseline_models,
-                            X_train, y_train, X_val, y_val, top_n=3):
+                            X_train, y_train, X_val, y_val, top_n=3, data_version='v1'):
         """Fine-tune les N meilleurs modèles baseline"""
         print(f"\n{'='*70}")
         print("PHASE 2: FINE-TUNING TOP MODELS")
@@ -534,7 +537,7 @@ class FineTuner:
         for model_name in top_model_names:
             base_model = baseline_models[model_name]
             result = self.fine_tune_model(
-                model_name, base_model, X_train, y_train, X_val, y_val
+                model_name, base_model, X_train, y_train, X_val, y_val, data_version=data_version
             )
             if result:
                 results[model_name] = result
@@ -562,7 +565,7 @@ class EnsembleBuilder:
         self.ensemble_models = {}
         self.register_models = register_models
     
-    def create_stacking_ensemble(self, base_models, X_train, y_train, X_val, y_val):
+    def create_stacking_ensemble(self, base_models, X_train, y_train, X_val, y_val, data_version='v1'):
         """Crée un modèle de stacking"""
         print(f"\n🎯 Creating Stacking Ensemble...")
         
@@ -583,6 +586,7 @@ class EnsembleBuilder:
             "n_base_models": str(len(base_models)),
             "base_models": ",".join(base_models.keys()),
             "meta_learner": "Ridge",
+            "data_version": data_version,
             "training_date": datetime.now().strftime("%Y-%m-%d"),
         }
 
@@ -610,7 +614,8 @@ class EnsembleBuilder:
                 'ensemble_type': 'stacking',
                 'n_base_models': len(base_models),
                 'base_model_names': ','.join(base_models.keys()),
-                'meta_learner': 'Ridge'
+                'meta_learner': 'Ridge',
+                'data_version': data_version
             })
             
             self.tracker.log_metrics(metrics)
@@ -638,7 +643,7 @@ class EnsembleBuilder:
             self.ensemble_models['stacking'] = stacking
             return stacking, metrics
     
-    def create_voting_ensemble(self, base_models, X_train, y_train, X_val, y_val):
+    def create_voting_ensemble(self, base_models, X_train, y_train, X_val, y_val, data_version='v1'):
         """Crée un modèle de voting"""
         print(f"\n🎯 Creating Voting Ensemble...")
         
@@ -652,6 +657,7 @@ class EnsembleBuilder:
             "n_base_models": str(len(base_models)),
             "base_models": ",".join(base_models.keys()),
             "meta_learner": "Ridge",
+            "data_version": data_version,
             "training_date": datetime.now().strftime("%Y-%m-%d"),
         }
 
@@ -678,7 +684,8 @@ class EnsembleBuilder:
             self.tracker.log_params({
                 'ensemble_type': 'voting',
                 'n_base_models': len(base_models),
-                'base_model_names': ','.join(base_models.keys())
+                'base_model_names': ','.join(base_models.keys()),
+                'data_version': data_version
             })
             
             self.tracker.log_metrics(metrics)
@@ -706,7 +713,7 @@ class EnsembleBuilder:
             self.ensemble_models['voting'] = voting
             return voting, metrics
     
-    def build_ensembles(self, base_models, X_train, y_train, X_val, y_val):
+    def build_ensembles(self, base_models, X_train, y_train, X_val, y_val, data_version='v1'):
         """Construit tous les ensembles"""
         print(f"\n{'='*70}")
         print("PHASE 3: ENSEMBLE METHODS")
@@ -715,12 +722,12 @@ class EnsembleBuilder:
         results = {}
         
         stacking, stack_metrics = self.create_stacking_ensemble(
-            base_models, X_train, y_train, X_val, y_val
+            base_models, X_train, y_train, X_val, y_val, data_version=data_version
         )
         results['stacking'] = stack_metrics
         
         voting, vote_metrics = self.create_voting_ensemble(
-            base_models, X_train, y_train, X_val, y_val
+            base_models, X_train, y_train, X_val, y_val, data_version=data_version
         )
         results['voting'] = vote_metrics
         
@@ -845,8 +852,12 @@ def load_data(data_dir='data/processed/v1'):
     X_train, y_train = train[feature_cols], train[target_col]
     X_val,   y_val   = val[feature_cols],   val[target_col]
     X_test,  y_test  = test[feature_cols],  test[target_col]
+    
+    # Extraire la version des données depuis le chemin
+    data_version = Path(data_dir).name  # Extrait 'v1', 'v2', etc.
+    print(f"   Data version: {data_version}")
 
-    return X_train, y_train, X_val, y_val, X_test, y_test
+    return X_train, y_train, X_val, y_val, X_test, y_test, data_version
 
 
 def _get_best_model(best_model_key, all_models, ensemble_builder):
@@ -863,7 +874,7 @@ def _get_best_model(best_model_key, all_models, ensemble_builder):
 
 
 def save_best_model(model, model_name, metrics, X_test, y_test, 
-                   output_dir='models/production'):
+                   output_dir='models/production', data_version='v1'):
     """Sauvegarde le meilleur modèle avec ses métadonnées"""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -892,7 +903,8 @@ def save_best_model(model, model_name, metrics, X_test, y_test,
         'metrics': all_metrics,
         'model_file': model_filename,
         'n_features': X_test.shape[1],
-        'feature_names': X_test.columns.tolist() if hasattr(X_test, 'columns') else []
+        'feature_names': X_test.columns.tolist() if hasattr(X_test, 'columns') else [],
+        'data_version': data_version
     }
     
     metadata_path = output_path / f'model_metadata_{timestamp}.json'
@@ -913,6 +925,7 @@ def save_best_model(model, model_name, metrics, X_test, y_test,
     print(f"Model: {model_path}")
     print(f"Metadata: {metadata_path}")
     print(f"Latest: {latest_model_path}")
+    print(f"data_version: {data_version}")
     print(f"\n📊 Test Set Performance:")
     print(f"   MAE:  {test_metrics['test_mae']:.2f} points")
     print(f"   RMSE: {test_metrics['test_rmse']:.2f} points")
@@ -924,7 +937,7 @@ def save_best_model(model, model_name, metrics, X_test, y_test,
 
 
 def register_and_promote_model(tracker, model, model_name, best_metrics, 
-                               X_test, y_test, auto_promote=True):
+                               X_test, y_test, auto_promote=True, data_version='v1'):
     """Enregistre le modèle dans MLflow Registry et le promote si nécessaire"""
     print(f"\n{'='*70}")
     print("MODEL REGISTRY & PROMOTION")
@@ -950,6 +963,7 @@ def register_and_promote_model(tracker, model, model_name, best_metrics,
         "training_date": datetime.now().strftime("%Y-%m-%d"),
         "test_mae": f"{test_metrics['test_mae']:.2f}",
         "test_r2": f"{test_metrics['test_r2']:.4f}",
+        "data_version": data_version,
     }
     
     # Start a new run for the final model registration
@@ -965,7 +979,8 @@ def register_and_promote_model(tracker, model, model_name, best_metrics,
         tracker.log_params({
             'model_name': model_name,
             'phase': 'production',
-            'n_features': X_test.shape[1]
+            'n_features': X_test.shape[1],
+            'data_version': data_version
         })
         
         # Log feature names as artifact with fixed filename
@@ -1009,6 +1024,7 @@ def register_and_promote_model(tracker, model, model_name, best_metrics,
         tracker.set_model_version_tag("PremierLeagueModel", model_version, "test_mae", f"{test_metrics['test_mae']:.2f}")
         tracker.set_model_version_tag("PremierLeagueModel", model_version, "training_date", datetime.now().strftime("%Y-%m-%d"))
         tracker.set_model_version_tag("PremierLeagueModel", model_version, "deployment_status", "candidate")
+        tracker.set_model_version_tag("PremierLeagueModel", model_version, "data_version", data_version)
     
     # Compare with production model and decide promotion
     if auto_promote:
@@ -1069,7 +1085,8 @@ def main():
     
     # Load data
     print("📥 Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_data(args.data_dir)
+    X_train, y_train, X_val, y_val, X_test, y_test, data_version = load_data(args.data_dir)
+    print(f" Data vesion: {data_version}")
     print(f"   Train: {len(X_train)} samples, {X_train.shape[1]} features")
     print(f"   Val:   {len(X_val)} samples")
     print(f"   Test:  {len(X_test)} samples")
@@ -1084,7 +1101,7 @@ def main():
     if args.phase in ['baseline', 'all']:
         baseline_trainer = BaselineTrainer(tracker, register_models=args.register_models)
         baseline_models, baseline_results = baseline_trainer.train_all_baselines(
-            X_train, y_train, X_val, y_val
+            X_train, y_train, X_val, y_val, data_version=data_version
         )
         all_results['baseline'] = baseline_results
         all_models.update(baseline_models)
@@ -1107,7 +1124,7 @@ def main():
             )
             finetuned_results = finetuner.fine_tune_top_models(
                 baseline_results, baseline_models,
-                X_train, y_train, X_val, y_val, top_n=args.top_n
+                X_train, y_train, X_val, y_val, top_n=args.top_n, data_version=data_version
             )
             all_results['finetuned'] = {k: v[1] for k, v in finetuned_results.items()}
             all_models.update(finetuner.best_models)
@@ -1125,7 +1142,7 @@ def main():
             
             ensemble_builder = EnsembleBuilder(tracker, register_models=args.register_models)
             ensemble_results = ensemble_builder.build_ensembles(
-                top_models, X_train, y_train, X_val, y_val
+                top_models, X_train, y_train, X_val, y_val, data_version=data_version
             )
             all_results['ensemble'] = ensemble_results
             all_models.update(ensemble_builder.ensemble_models)
@@ -1148,7 +1165,8 @@ def main():
                 model_name=best_model_key,
                 metrics=best_metrics,
                 X_test=X_test,
-                y_test=y_test
+                y_test=y_test,
+                data_version=data_version
             )
             
             # Register in MLflow and promote if better
@@ -1160,12 +1178,14 @@ def main():
                 best_metrics=best_metrics,
                 X_test=X_test,
                 y_test=y_test,
-                auto_promote=args.auto_promote
+                auto_promote=args.auto_promote,
+                data_version=data_version
             )
             
             print(f"\n{'='*70}")
             print("📊 FINAL TEST SET PERFORMANCE")
             print(f"{'='*70}")
+            print(f" Data version: {data_version}")
             print(f"   MAE:  {test_metrics['test_mae']:.2f} points")
             print(f"   RMSE: {test_metrics['test_rmse']:.2f} points")
             print(f"   R²:   {test_metrics['test_r2']:.4f}")

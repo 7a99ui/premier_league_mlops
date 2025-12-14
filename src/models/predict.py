@@ -22,7 +22,7 @@ from src.models.utils import ModelPredictor
 
 class PredictionPipeline:
     """Pipeline pour générer et sauvegarder des prédictions"""
-    
+    '''
     def __init__(self, model_path=None, use_mlflow=True, mlflow_stage="Production"):
         """
         Args:
@@ -63,6 +63,73 @@ class PredictionPipeline:
         else:
             print(f"⚠️  Scaler not found at: {scaler_path_v1}")
             print(f"   Predictions may be inaccurate without scaling!")
+    '''
+    
+    
+    def __init__(self, model_path=None, use_mlflow=True, mlflow_stage="Production", data_version=None):
+        """
+        Args:
+            model_path: Chemin vers un modèle local spécifique. Si None, utilise MLflow ou latest.
+            use_mlflow: Si True, charge depuis MLflow Registry
+            mlflow_stage: Stage du modèle MLflow (Production, Staging, Archived)
+            data_version: Version des données à utiliser. Si None, utilise celle du modèle.
+        """
+        self.predictor = ModelPredictor(
+            model_path=model_path,
+            use_mlflow=use_mlflow,
+            mlflow_stage=mlflow_stage
+        )
+        
+        # Utiliser le chemin de base du projet
+        self.predictions_dir = Path(__file__).parent.parent.parent / 'predictions'
+        self.predictions_dir.mkdir(exist_ok=True)
+        self.features_cache = None  # Cache pour les features
+        
+        # Log model source
+        model_source = self.predictor.metadata.get('source', 'unknown')
+        print(f"🔍 Model source: {model_source}")
+        if model_source == 'mlflow_registry':
+            print(f"   Stage: {self.predictor.metadata.get('stage', 'unknown')}")
+            print(f"   Version: {self.predictor.metadata.get('version', 'unknown')}")
+        
+        # ===== Charger le scaler automatiquement selon la version des données =====
+        self.scaler = None
+        project_root = self._get_project_root()
+        
+        # Déterminer la version des données à utiliser
+        # Priorité: 1) data_version passé en paramètre, 2) metadata du modèle, 3) 'v1' par défaut
+        if data_version is not None:
+            self.data_version = data_version
+            print(f"📌 Using data version from parameter: {self.data_version}")
+        elif 'data_version' in self.predictor.metadata:
+            self.data_version = self.predictor.metadata['data_version']
+            print(f"📌 Using data version from model metadata: {self.data_version}")
+        else:
+            self.data_version = 'v1'
+            print(f"⚠️  No data version specified, using default: {self.data_version}")
+        
+        # Construire le chemin du scaler
+        scaler_path = project_root / 'data' / 'processed' / self.data_version / 'scaler.joblib'
+        
+        if scaler_path.exists():
+            try:
+                self.scaler = joblib.load(scaler_path)
+                print(f"✅ Scaler loaded from: {scaler_path}")
+            except Exception as e:
+                print(f"⚠️  Failed to load scaler: {e}")
+        else:
+            print(f"⚠️  Scaler not found at: {scaler_path}")
+            print(f"   Available data versions:")
+            data_processed = project_root / 'data' / 'processed'
+            if data_processed.exists():
+                versions = [d.name for d in data_processed.iterdir() if d.is_dir()]
+                for v in sorted(versions):
+                    scaler_exists = (data_processed / v / 'scaler.joblib').exists()
+                    status = "✓" if scaler_exists else "✗"
+                    print(f"      {status} {v}")
+            print(f"   Predictions may be inaccurate without scaling!")
+        
+        
     
     def _get_project_root(self):
         """Retourne le chemin racine du projet"""
@@ -84,20 +151,34 @@ class PredictionPipeline:
             
         print("📂 Chargement de toutes les données...")
         
+        # ✅ CORRECTION : Utiliser le chemin absolu résolu
         project_root = self._get_project_root()
         data_dir = project_root / 'data' / 'processed' / data_version
         
+        # ✅ DEBUG : Afficher le chemin exact
+        print(f"   📍 Chemin utilisé: {data_dir.resolve()}")
+        
         # Charger SEULEMENT features.parquet
         features_file = data_dir / 'features.parquet'
+        
+        # ✅ DEBUG : Vérifier l'existence
+        print(f"   📍 Fichier: {features_file}")
+        print(f"   📍 Existe: {features_file.exists()}")
         
         if features_file.exists():
             print(f"  ✓ Chargement: features.parquet (fichier unique)")
             combined_data = pd.read_parquet(features_file)
             print(f"  Total: {len(combined_data):,} lignes, {combined_data['team'].nunique()} équipes")
             
+            # ✅ DEBUG : Afficher les saisons
+            print(f"  📅 Saisons présentes:")
+            for season in sorted(combined_data['season'].unique()):
+                count = len(combined_data[combined_data['season'] == season])
+                print(f"     - {season}: {count} lignes")
+            
             # Vérification des colonnes
             feature_cols = [col for col in combined_data.columns 
-                          if col not in ['team', 'season', 'gameweek', 'target_final_points']]
+                        if col not in ['team', 'season', 'gameweek', 'target_final_points']]
             print(f"  Features: {len(feature_cols)}")
             
             # Vérifier qu'il n'y a pas de duplications
@@ -165,7 +246,7 @@ class PredictionPipeline:
             
             # Vérification des colonnes
             feature_cols = [col for col in combined_data.columns 
-                          if col not in ['team', 'season', 'gameweek', 'target_final_points']]
+                        if col not in ['team', 'season', 'gameweek', 'target_final_points']]
             print(f"  Features: {len(feature_cols)}")
             
             self.features_cache = combined_data
@@ -290,7 +371,7 @@ class PredictionPipeline:
             print(f"📂 Chargement des données depuis: {features_path}")
             features_df = pd.read_parquet(features_path)
         else:
-            features_df = self.load_all_features(data_version)
+            features_df = self.load_all_features(data_version=data_version)
         
         # Essayer différents formats de saison
         season_formats = [season, season.replace('-', '/'), season.replace('-', '_')]
@@ -470,7 +551,7 @@ class PredictionPipeline:
         print(f"{'='*70}")
     
     def predict_and_save(self, season, gameweek, features_path=None, 
-                        display=True, data_version='v1'):
+                    display=True, data_version='v1'):
         """
         Pipeline complet : prédire, sauvegarder et afficher
         
@@ -484,6 +565,11 @@ class PredictionPipeline:
         Returns:
             DataFrame: Prédictions
         """
+        # ✅ CORRECTION : Utiliser self.data_version si data_version n'est pas fourni
+        if data_version == 'v1' and hasattr(self, 'data_version'):
+            data_version = self.data_version
+            print(f"📌 Using data version from pipeline: {data_version}")
+        
         # Prédictions
         predictions = self.predict_at_gameweek(season, gameweek, features_path, data_version)
         
@@ -548,13 +634,13 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
     print(f"Gameweeks: {start_gw} to {end_gw}")
     print(f"{'='*70}\n")
     
-    pipeline = PredictionPipeline(use_mlflow=use_mlflow, mlflow_stage=mlflow_stage)
+    pipeline = PredictionPipeline(use_mlflow=use_mlflow, mlflow_stage=mlflow_stage, data_version=data_version)
     evolution = {}
     
     for gw in range(start_gw, end_gw + 1):
         try:
             print(f"\n🔄 Predicting at gameweek {gw}...")
-            predictions = pipeline.predict_at_gameweek(season, gw, features_path, data_version)
+            predictions = pipeline.predict_at_gameweek(season, gw, features_path,data_version=data_version)
             evolution[gw] = predictions
             
             if 'points_error' in predictions.columns:
@@ -602,7 +688,6 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
     
     return evolution
 
-
 def main():
     parser = argparse.ArgumentParser(description='Predict Premier League Final Standings with MLflow Support')
     parser.add_argument('--season', required=True, help='Season (e.g., 2024-2025)')
@@ -612,8 +697,8 @@ def main():
                        help='Path to features file')
     parser.add_argument('--model-path', default=None,
                        help='Path to specific local model (default: uses MLflow Production)')
-    parser.add_argument('--data-version', default='v1',
-                       help='Data version to use (v1, v2, etc. - default: v1)')
+    parser.add_argument('--data-version', default=None,
+                       help='Data version to use (v1, v2, etc. - default: from model metadata)')
     parser.add_argument('--evolution', action='store_true',
                        help='Predict evolution from gameweek 10 to current')
     parser.add_argument('--no-mlflow', action='store_true',
@@ -632,23 +717,23 @@ def main():
             args.season, 
             10, 
             args.gameweek, 
-            args.features_path, 
-            args.data_version,
+            args.features_path,
             use_mlflow=use_mlflow,
-            mlflow_stage=args.mlflow_stage
+            mlflow_stage=args.mlflow_stage,
+            data_version=args.data_version  # ✅ AJOUTER ICI
         )
     else:
         # Prédiction simple
         pipeline = PredictionPipeline(
             model_path=args.model_path,
             use_mlflow=use_mlflow,
-            mlflow_stage=args.mlflow_stage
+            mlflow_stage=args.mlflow_stage,
+            data_version=args.data_version  # ✅ AJOUTER ICI
         )
         predictions = pipeline.predict_and_save(
             args.season, 
             args.gameweek, 
-            args.features_path,
-            data_version=args.data_version
+            args.features_path
         )
     
     print(f"\n✅ Prediction complete!")
