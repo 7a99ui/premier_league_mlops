@@ -13,9 +13,9 @@ st.set_page_config(
 
 st.title("🏆 Premier League – Classement Final Prédit")
 
-# ------------------ PATHS ------------------
-DATA_PATH = Path("../data/processed/v1/test.parquet")
-MODEL_PATH = Path("../models/production/latest_model.joblib")
+# ------------------ PATHS (DOCKER FRIENDLY) ------------------
+DATA_PATH = Path("data/processed/v1/test.parquet")
+MODEL_PATH = Path("models/production/latest_model.joblib")
 
 # ------------------ LOAD DATA ------------------
 try:
@@ -57,7 +57,7 @@ X = season_data[feature_cols]
 # ------------------ PREDICTION ------------------
 season_data["predicted_points"] = model.predict(X)
 
-# ------------------ ✅ SOLUTION : DERNIÈRE GAMEWEEK ------------------
+# ------------------ DERNIÈRE GAMEWEEK ------------------
 last_gameweek = season_data["gameweek"].max()
 
 final_gw_data = season_data[
@@ -73,42 +73,40 @@ final_table = (
 
 final_table["Position"] = final_table.index + 1
 
-# ------------------ CLEAN DISPLAY TABLE ------------------
-display_table = final_table[["Position", "team", "predicted_points"]].copy()
-
-display_table.rename(
-    columns={
+# ------------------ DISPLAY TABLE (3 COLONNES) ------------------
+display_table = (
+    final_table[["Position", "team", "predicted_points"]]
+    .rename(columns={
         "team": "Équipe",
         "predicted_points": "Points"
-    },
-    inplace=True
+    })
 )
 
 display_table["Points"] = display_table["Points"].round(0).astype(int)
 
-# ------------------ DISPLAY FINAL (EXACTEMENT 3 COLONNES) ------------------
+# ------------------ STYLED DISPLAY ------------------
 st.subheader(f"📊 Classement final prédit – Saison {selected_season}")
 
 styled_table = (
     display_table
-    .reset_index(drop=True)     # sécurité
     .style
-    .hide(axis="index")         # ✅ SUPPRESSION DE LA 4ᵉ COLONNE
+    .hide(axis="index")  # ✅ SUPPRIME L’INDEX (PAS DE 4ᵉ COLONNE)
     .set_properties(
         **{
             "text-align": "center",
-            "vertical-align": "middle"
+            "vertical-align": "middle",
+            "font-size": "16px"
         }
     )
     .set_table_styles([
-        {"selector": "th", "props": [("text-align", "center")]}
+        {"selector": "th", "props": [
+            ("text-align", "center"),
+            ("font-size", "17px")
+        ]}
     ])
 )
 
 st.table(styled_table)
-
-
-
 
 # ------------------ SANITY CHECK ------------------
 max_points = display_table["Points"].max()
@@ -118,4 +116,5 @@ if max_points > 114:
         "⚠️ Attention : points > maximum théorique (114). "
         "Vérifiez la target ou le modèle."
     )
-
+else:
+    st.success("✅ Points cohérents avec une saison de Premier League.")
