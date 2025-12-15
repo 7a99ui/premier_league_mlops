@@ -1,0 +1,37 @@
+{
+  "model_name": "ensemble_stacking",
+  "timestamp": "20251215_213518",
+  "metrics": {
+    "train_mae": 4.319931209299906,
+    "train_rmse": 5.559438073243388,
+    "train_r2": 0.9045231186459809,
+    "val_mae": 4.704208453337126,
+    "val_rmse": 6.2530457025353,
+    "val_r2": 0.8900248057658908,
+    "test_mae": 5.3566323238716835,
+    "test_rmse": 6.968054926259725,
+    "test_r2": 0.845531207242852
+  },
+  "model_file": "best_model_20251215_213518.joblib",
+  "n_features": 17,
+  "feature_names": [
+    "current_position",
+    "current_points",
+    "matches_played",
+    "draws",
+    "losses",
+    "goals_conceded_per_game",
+    "form_last_5_points",
+    "form_last_5_goals_for",
+    "form_last_5_goals_against",
+    "clean_sheet_rate",
+    "btts_rate",
+    "avg_total_scoring_att",
+    "avg_total_pass",
+    "avg_total_tackle",
+    "avg_won_contest",
+    "avg_saves",
+    "avg_total_offside"
+  ],
+  "data_version": "v3"
+}

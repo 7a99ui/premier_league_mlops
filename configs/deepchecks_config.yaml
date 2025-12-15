@@ -1,0 +1,87 @@
+# DeepChecks Configuration
+# Premier League MLOps Project
+
+# Chemins
+paths:
+  data_dir: "data/processed/v1"
+  reports_dir: "reports/deepchecks"
+  logs_dir: "logs"
+
+# Paramètres du dataset
+dataset:
+  label: "target_final_points"
+  
+  # Features à exclure (métadata)
+  exclude_features:
+    - season
+    - team
+    - gameweek
+    - match_id
+  
+  # Features catégorielles (auto-détection si vide)
+  categorical_features: []
+
+# Seuils de validation
+thresholds:
+  # Data Integrity
+  max_duplicate_rate: 0.05  # 5% max de duplicatas
+  max_missing_rate: 0.20    # 20% max de valeurs manquantes
+  
+  # Train-Test Validation
+  feature_drift_threshold: 0.15  # Drift > 15% = alerte
+  label_drift_threshold: 0.10    # Label drift > 10% = alerte
+  
+  # Model Evaluation
+  min_model_score: 0.70     # Score minimum acceptable (R²)
+  max_prediction_error: 15  # Erreur max acceptable (MAE)
+
+# Checks à activer
+checks:
+  data_integrity:
+    enabled: true
+    checks:
+      - mixed_nulls
+      - string_mismatch
+      - mixed_data_types
+      - is_single_value
+      - special_characters
+      - data_duplicates
+  
+  train_test_validation:
+    enabled: true
+    checks:
+      - train_test_feature_drift
+      - train_test_label_drift
+      - datasets_size_comparison
+      - feature_label_correlation
+  
+  model_evaluation:
+    enabled: true
+    checks:
+      - simple_model_comparison
+      - calibration_score
+      - segment_performance
+
+# Rapports
+reports:
+  generate_html: true
+  generate_json: true
+  keep_history: true
+  max_reports: 20
+
+# Alertes
+alerts:
+  enabled: false
+  email: ""
+  slack_webhook: ""
+  
+  # Conditions d'alerte
+  trigger_on:
+    - high_drift
+    - data_quality_issues
+    - model_performance_drop
+
+# Logging
+logging:
+  level: "INFO"
+  file: "logs/deepchecks_validation.log"

@@ -1,11 +1,11 @@
 {
-  "timestamp": "2025-12-11T11:06:51.419443",
+  "timestamp": "2025-12-15T22:35:52.015396",
   "total_validations": 16,
   "results": [
     {
       "season": "2015-2016",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.050547",
+      "timestamp": "2025-12-15T22:35:51.970133",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -94,7 +94,7 @@
     {
       "season": "2015-2016",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.079864",
+      "timestamp": "2025-12-15T22:35:51.974152",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -182,7 +182,7 @@
     {
       "season": "2016-2017",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.102872",
+      "timestamp": "2025-12-15T22:35:51.976151",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -271,7 +271,7 @@
     {
       "season": "2016-2017",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.131588",
+      "timestamp": "2025-12-15T22:35:51.979658",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -359,7 +359,7 @@
     {
       "season": "2017-2018",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.156734",
+      "timestamp": "2025-12-15T22:35:51.981659",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -448,7 +448,7 @@
     {
       "season": "2017-2018",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.180241",
+      "timestamp": "2025-12-15T22:35:51.985659",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -536,7 +536,7 @@
     {
       "season": "2018-2019",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.201314",
+      "timestamp": "2025-12-15T22:35:51.988360",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -625,7 +625,7 @@
     {
       "season": "2018-2019",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.224864",
+      "timestamp": "2025-12-15T22:35:51.991367",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -713,7 +713,7 @@
     {
       "season": "2019-2020",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.245229",
+      "timestamp": "2025-12-15T22:35:51.994365",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -802,7 +802,7 @@
     {
       "season": "2019-2020",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.270640",
+      "timestamp": "2025-12-15T22:35:51.997873",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -890,7 +890,7 @@
     {
       "season": "2020-2021",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.294044",
+      "timestamp": "2025-12-15T22:35:51.999875",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -979,7 +979,7 @@
     {
       "season": "2020-2021",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.321987",
+      "timestamp": "2025-12-15T22:35:52.002873",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -1067,7 +1067,7 @@
     {
       "season": "2021-2022",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.343765",
+      "timestamp": "2025-12-15T22:35:52.004873",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -1156,7 +1156,7 @@
     {
       "season": "2021-2022",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.370782",
+      "timestamp": "2025-12-15T22:35:52.008892",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -1244,7 +1244,7 @@
     {
       "season": "2022-2023",
       "data_type": "raw_results",
-      "timestamp": "2025-12-11T11:06:51.393238",
+      "timestamp": "2025-12-15T22:35:52.011890",
       "expectations": [
         {
           "expectation": "column_exists",
@@ -1333,7 +1333,7 @@
     {
       "season": "2022-2023",
       "data_type": "standings",
-      "timestamp": "2025-12-11T11:06:51.418448",
+      "timestamp": "2025-12-15T22:35:52.015396",
       "expectations": [
         {
           "expectation": "column_exists",

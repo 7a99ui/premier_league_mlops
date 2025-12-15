@@ -1,0 +1,74 @@
+# Configuration pour la détection de drift
+# Premier League MLOps Project
+
+# Chemins
+paths:
+  data_base: "data/processed"
+  reports: "reports/drift"
+  
+# Versions à comparer
+versions:
+  reference: "v3"  # Version de référence (modèle actuel)
+  current: "v4"    # Nouvelle version à tester
+  
+# Paramètres de détection
+detection:
+  # Seuil de drift pour recommander un réentraînement
+  drift_threshold: 0.3  # 30% des features peuvent drifter
+  
+  # Seuil du test statistique (KS test)
+  statistical_threshold: 0.05  # p-value < 0.05 = drift
+  
+  # Colonne target
+  target_column: "target_final_points"
+  
+  # Splits à analyser
+  splits:
+    - train
+    - val
+    - test
+
+# Décision de réentraînement
+decision:
+  # Niveaux de sévérité
+  severity_thresholds:
+    high: 0.5    # > 50% de drift
+    medium: 0.3  # 30-50% de drift
+    low: 0.0     # < 30% de drift
+  
+  # Force le réentraînement si target drift
+  force_retrain_on_target_drift: true
+  
+# Rapports
+reports:
+  # Générer rapport HTML
+  generate_html: true
+  
+  # Générer métriques JSON
+  generate_json: true
+  
+  # Garder l'historique des rapports
+  keep_history: true
+  
+  # Nombre de rapports à conserver
+  max_reports: 10
+
+# Features importantes à surveiller en priorité
+important_features:
+  - current_points
+  - goals_for
+  - goals_against
+  - win_rate
+  - points_per_game
+  - form_last_5_points
+  
+# Alertes (pour future implémentation)
+alerts:
+  enabled: false
+  email: "your-email@example.com"
+  slack_webhook: ""
+  
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/drift_detection.log"

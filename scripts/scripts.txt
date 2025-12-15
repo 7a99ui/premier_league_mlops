@@ -89,3 +89,11 @@ python train.py --data-dir data/processed/v1 --phase all --top-n 3 --register-mo
 
 
 python src\data\features.py --seasons 2015-2016 2016-2017 2017-2018 2018-2019 2019-2020 2020-2021 2021-2022 2022-2023 --output-dir data\processed\v1
+
+
+
+
+
+deepchecks_validator.py Vérifier qualité donnéespython ... --mode full
+drift_detection.pyComparer 2 versionspython ... --split train
+integrated_monitoring.pyCheck completpython ... --mode pre-training
