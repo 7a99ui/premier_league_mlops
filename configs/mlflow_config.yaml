@@ -4,7 +4,7 @@
 tracking_uri: "https://dagshub.com/7a99ui/premier_league_mlops.mlflow"
 registry_uri: "https://dagshub.com/7a99ui/premier_league_mlops.mlflow"
 
-experiment_name: "premier-league-prediction"
+experiment_name: "premier-league-predictions"
 
 autolog: true
 

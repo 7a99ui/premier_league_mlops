@@ -85,3 +85,7 @@ python train.py --data-dir data/processed/v1 --phase all --top-n 3 --register-mo
 * Flag pour **promouvoir automatiquement le meilleur modèle vers le stage “Production”** si ses métriques sont meilleures que le modèle actuel en production.
 * Si tu passes `--no-auto-promote` à la place, le modèle sera juste enregistré mais restera en staging pour validation manuelle.
 
+
+
+
+python src\data\features.py --seasons 2015-2016 2016-2017 2017-2018 2018-2019 2019-2020 2020-2021 2021-2022 2022-2023 --output-dir data\processed\v1
