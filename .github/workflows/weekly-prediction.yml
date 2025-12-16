@@ -1,0 +1,170 @@
+name: Weekly Prediction Pipeline
+
+on:
+  schedule:
+    # Exécution tous les lundis à 6h00 UTC (après les matchs du weekend)
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      season:
+        description: 'Season (e.g., 2024-2025)'
+        required: false
+        default: '2024-2025'
+
+env:
+  PYTHON_VERSION: '3.10'
+  SEASON: ${{ github.event.inputs.season || '2024-2025' }}
+
+jobs:
+  weekly-prediction:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Configure DVC
+        run: |
+          dvc remote modify origin --local auth basic
+          dvc remote modify origin --local user ${{ secrets.DAGSHUB_USERNAME }}
+          dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
+          
+      - name: Pull latest data from DVC
+        run: |
+          dvc pull
+          
+      - name: Incremental data ingestion
+        id: ingestion
+        run: |
+          echo "🔄 Fetching new matches for ${{ env.SEASON }}..."
+          python src/data/ingestion.py \
+            --mode incremental \
+            --season ${{ env.SEASON }} \
+            --output-dir data/raw
+          
+          # Récupérer le dernier gameweek disponible
+          LATEST_GW=$(python -c "
+          import pandas as pd
+          from pathlib import Path
+          
+          results_file = Path('data/raw/${{ env.SEASON }}/results.csv')
+          if results_file.exists():
+              df = pd.read_csv(results_file)
+              print(int(df['gameweek'].max()))
+          else:
+              print(1)
+          ")
+          
+          echo "GAMEWEEK=${LATEST_GW}" >> $GITHUB_OUTPUT
+          echo "Latest gameweek: ${LATEST_GW}"
+            
+      - name: Validate new data
+        run: |
+          python src/data/validation.py \
+            --mode raw \
+            --raw-data-dir data/raw
+            
+      - name: Generate features
+        run: |
+          python src/data/features.py \
+            --seasons ${{ env.SEASON }} \
+            --raw-data-dir data/raw \
+            --output-dir data/processed/v1
+            
+      - name: Validate features
+        run: |
+          python src/data/validation.py \
+            --mode features \
+            --features-path data/processed/v1/features.parquet
+            
+      - name: Configure MLflow
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          echo "MLflow configured"
+          
+      - name: Generate predictions
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          python src/models/predict.py \
+            --season ${{ env.SEASON }} \
+            --gameweek ${{ steps.ingestion.outputs.GAMEWEEK }} \
+            --mlflow-stage Production \
+            --output-dir predictions
+            
+      - name: Generate evolution predictions
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          python src/models/predict.py \
+            --season ${{ env.SEASON }} \
+            --gameweek ${{ steps.ingestion.outputs.GAMEWEEK }} \
+            --evolution \
+            --mlflow-stage Production \
+            --output-dir predictions/evolution
+            
+      - name: Commit predictions to DVC
+        run: |
+          dvc add predictions/
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add predictions.dvc .gitignore
+          git commit -m "Update predictions for GW${{ steps.ingestion.outputs.GAMEWEEK }}" || echo "No changes to commit"
+          
+      - name: Push to DVC
+        run: |
+          dvc push
+          
+      - name: Push to GitHub
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          
+      - name: Create summary
+        run: |
+          echo "## 📊 Weekly Prediction Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Season**: ${{ env.SEASON }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Gameweek**: ${{ steps.ingestion.outputs.GAMEWEEK }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Predictions generated and deployed successfully!" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Weekly Prediction Pipeline Failed',
+              body: `The weekly prediction pipeline failed for season ${{ env.SEASON }}.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ['ci-cd', 'prediction-failure']
+            })
