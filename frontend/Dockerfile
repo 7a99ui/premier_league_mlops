@@ -1,15 +1,18 @@
-# Frontend - Streamlit
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copier uniquement le nécessaire dans le container
+# ✅ Installer libgomp1 pour LightGBM
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY ./frontend/requirements.txt .
+RUN pip install --default-timeout=300 --no-cache-dir -r requirements.txt
+
 COPY ./frontend/app.py ./app.py
 COPY ./data ./data
 COPY ./models ./models
-
-# Installer dépendances
-RUN pip install --no-cache-dir streamlit pandas joblib scikit-learn
 
 EXPOSE 8501
 
