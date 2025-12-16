@@ -40,6 +40,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install dvc-s3  # Required for DagsHub S3 storage
           
       - name: Configure DVC
         env:
@@ -166,13 +167,10 @@ jobs:
           
       - name: Notify on failure
         if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Weekly Prediction Pipeline Failed',
-              body: `The weekly prediction pipeline failed for season ${{ env.SEASON }}.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              labels: ['ci-cd', 'prediction-failure']
-            })
+        run: |
+          echo "⚠️ Pipeline failed - check logs above for details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Common issues:" >> $GITHUB_STEP_SUMMARY
+          echo "- DVC authentication: Check AWS credentials" >> $GITHUB_STEP_SUMMARY
+          echo "- MLflow connection: Verify MLFLOW_TRACKING_URI" >> $GITHUB_STEP_SUMMARY
+          echo "- Missing data: Ensure DVC remote has data" >> $GITHUB_STEP_SUMMARY

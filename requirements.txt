@@ -10,7 +10,7 @@ progressbar2==4.3.2
 # Data Versioning
 dvc==3.37.0
 dvc-gdrive==3.0.1  # ou dvc-s3 si vous utilisez AWS
-
+dvc-s3
 # Data Validation
 great-expectations==0.18.8
 
