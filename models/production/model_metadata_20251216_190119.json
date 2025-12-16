@@ -1,6 +1,6 @@
 {
   "model_name": "ensemble_stacking",
-  "timestamp": "20251216_193437",
+  "timestamp": "20251216_190119",
   "metrics": {
     "train_mae": 4.319931209299906,
     "train_rmse": 5.559438073243388,
@@ -12,7 +12,7 @@
     "test_rmse": 6.968054926259725,
     "test_r2": 0.845531207242852
   },
-  "model_file": "best_model_20251216_193437.joblib",
+  "model_file": "best_model_20251216_190119.joblib",
   "n_features": 17,
   "feature_names": [
     "current_position",

@@ -3,3 +3,5 @@ pandas
 joblib
 scikit-learn
 lightgbm
+mlflow
+dagshub

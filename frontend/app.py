@@ -1,6 +1,8 @@
+import os
 import streamlit as st
 import pandas as pd
-from joblib import load
+import mlflow
+from mlflow.tracking import MlflowClient
 from pathlib import Path
 
 # ------------------ CONFIG ------------------
@@ -9,6 +11,32 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ------------------ CONFIGURATION MLFLOW ------------------
+# Set MLflow tracking URI and credentials
+os.environ['MLFLOW_TRACKING_URI'] = 'https://dagshub.com/7a99ui/premier_league_mlops.mlflow'
+
+# Check if credentials are provided via environment variables
+if os.getenv('MLFLOW_TRACKING_USERNAME') and os.getenv('MLFLOW_TRACKING_PASSWORD'):
+    os.environ['MLFLOW_TRACKING_USERNAME'] = os.getenv('MLFLOW_TRACKING_USERNAME')
+    os.environ['MLFLOW_TRACKING_PASSWORD'] = os.getenv('MLFLOW_TRACKING_PASSWORD')
+    st.sidebar.info("🔐 Authentification via variables d'environnement")
+else:
+    st.sidebar.warning("⚠️ Credentials MLflow non trouvés. Configurez MLFLOW_TRACKING_USERNAME et MLFLOW_TRACKING_PASSWORD")
+    st.error("""
+    ❌ **Configuration requise:**
+    
+    Veuillez définir les variables d'environnement suivantes dans votre docker-compose.yml:
+    
+    ```yaml
+    environment:
+      - MLFLOW_TRACKING_USERNAME=votre_username
+      - MLFLOW_TRACKING_PASSWORD=votre_token
+    ```
+    
+    Obtenez votre token sur: https://dagshub.com/user/settings/tokens
+    """)
+    st.stop()
 
 # ------------------ MODERN CSS THEME ------------------
 st.markdown("""
@@ -302,7 +330,6 @@ st.markdown("""
 
 # ------------------ PATHS ------------------
 DATA_PATH = Path("data/processed/v3/test.parquet")
-MODEL_PATH = Path("models/production/latest_model.joblib")
 
 # ------------------ LOAD DATA ------------------
 try:
@@ -311,12 +338,55 @@ except FileNotFoundError:
     st.error(f"❌ Fichier introuvable : {DATA_PATH}")
     st.stop()
 
-# ------------------ LOAD MODEL ------------------
-try:
-    model = load(MODEL_PATH)
-except FileNotFoundError:
-    st.error(f"❌ Modèle introuvable : {MODEL_PATH}")
-    st.stop()
+# ------------------ LOAD MODEL FROM MLFLOW ------------------
+@st.cache_resource
+def load_model_from_mlflow():
+    """Charge le modèle depuis MLflow Registry"""
+    try:
+        client = MlflowClient()
+        
+        # Récupérer toutes les versions du modèle
+        versions = client.search_model_versions("name='PremierLeagueModel'")
+        
+        if not versions:
+            st.error("❌ Aucune version du modèle PremierLeagueModel trouvée dans MLflow")
+            st.stop()
+        
+        # Chercher la version avec le tag deployment_status=production
+        production_version = None
+        for v in versions:
+            if v.tags.get('deployment_status') == 'production':
+                production_version = v.version
+                break
+        
+        # Si aucune version n'a le tag, prendre la dernière version
+        if not production_version:
+            production_version = versions[0].version
+            st.sidebar.warning(f"⚠️ Aucun modèle en production, utilisation de la version {production_version}")
+        
+        # Charger le modèle
+        model_uri = f"models:/PremierLeagueModel/{production_version}"
+        model = mlflow.sklearn.load_model(model_uri)
+        
+        # Afficher les infos du modèle dans la sidebar
+        st.sidebar.success(f"✅ Modèle v{production_version} chargé depuis MLflow")
+        
+        # Afficher les métriques si disponibles
+        model_version_details = client.get_model_version("PremierLeagueModel", production_version)
+        if model_version_details.tags:
+            st.sidebar.markdown("**📊 Métriques du modèle:**")
+            if 'val_mae' in model_version_details.tags:
+                st.sidebar.text(f"Val MAE: {model_version_details.tags['val_mae']}")
+            if 'test_mae' in model_version_details.tags:
+                st.sidebar.text(f"Test MAE: {model_version_details.tags['test_mae']}")
+        
+        return model
+        
+    except Exception as e:
+        st.error(f"❌ Impossible de charger le modèle depuis MLflow: {e}")
+        st.stop()
+
+model = load_model_from_mlflow()
 
 # ------------------ SIDEBAR ------------------
 st.sidebar.markdown("### ⚙️ PARAMÈTRES")
