@@ -1,0 +1,139 @@
+name: Seasonal Model Retraining
+
+on:
+  schedule:
+    # Run once a year on June 1st at 00:00 UTC (after PL season ends)
+    - cron: '0 0 1 6 *'
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: 'Seasons to train on (space separated, e.g., "2023-2024 2024-2025")'
+        required: false
+        default: ''
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  seasonal-retraining:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install dvc-s3
+          
+      - name: Configure DVC
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          # DVC with DagsHub S3 endpoint
+          echo "DVC configured with S3 endpoint"
+          
+      - name: Pull latest data from DVC
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          dvc pull
+          
+      - name: Full Historical Data Ingestion
+        run: |
+          echo "🔄 Fetching all historical data..."
+          # If specific seasons provided via input, use them, otherwise fetch all
+          if [ -n "${{ github.event.inputs.seasons }}" ]; then
+            python src/data/ingestion.py --mode historical --seasons ${{ github.event.inputs.seasons }}
+          else
+            python src/data/ingestion.py --mode historical
+          fi
+          
+      - name: Validate Raw Data
+        run: |
+          python src/data/validation.py --mode raw --raw-data-dir data/raw
+          
+      - name: Generate Features
+        run: |
+          python src/data/features.py \
+            --raw-data-dir data/raw \
+            --output-dir data/processed
+            
+      - name: Validate Features
+        run: |
+          python src/data/validation.py \
+            --mode features \
+            --features-path data/processed/features.parquet
+
+      - name: Prepare Data
+        run: |
+          # Split into train/val/test and scale
+          python src/data/prepare.py \
+            --features-path data/processed/features.parquet \
+            --output-dir data/processed
+            
+      - name: Configure MLflow
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          echo "MLflow configured"
+
+      - name: Train and Compare Models
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          # Run training with auto-promote flag
+          # This will:
+          # 1. Train models (Baseline, Fine-tune, Ensemble)
+          # 2. Select the best one
+          # 3. Compare with current Production model
+          # 4. Promote to Production if better
+          
+          python src/models/train.py \
+            --phase all \
+            --data-dir data/processed \
+            --register-models \
+            --auto-promote
+            
+      - name: Commit updated data to DVC
+        run: |
+          # Commit the new dataset versions
+          dvc add data/processed/
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/processed.dvc .gitignore
+          git commit -m "Update training data after seasonal ingestion" || echo "No data changes to commit"
+          
+      - name: Push to DVC
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          dvc push
+          
+      - name: Push to GitHub
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

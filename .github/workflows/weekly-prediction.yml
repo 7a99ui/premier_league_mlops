@@ -93,13 +93,19 @@ jobs:
           python src/data/features.py \
             --seasons ${{ env.SEASON }} \
             --raw-data-dir data/raw \
-            --output-dir data/processed/v1
-            
+            --output-dir data/processed/
       - name: Validate features
         run: |
           python src/data/validation.py \
             --mode features \
-            --features-path data/processed/v1/features.parquet
+            --features-path data/processed/features.parquet
+            
+      - name: Prepare data
+        run: |
+          # Prepare data (split/scale) to generate test.parquet for Streamlit
+          python src/data/prepare.py \
+            --features-path data/processed/features.parquet \
+            --output-dir data/processed
             
       - name: Configure MLflow
         env:
@@ -134,13 +140,14 @@ jobs:
             --mlflow-stage Production \
             --output-dir predictions/evolution
             
-      - name: Commit predictions to DVC
+      - name: Commit predictions and data to DVC
         run: |
           dvc add predictions/
+          dvc add data/processed/
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add predictions.dvc .gitignore
-          git commit -m "Update predictions for GW${{ steps.ingestion.outputs.GAMEWEEK }}" || echo "No changes to commit"
+          git add predictions.dvc data/processed.dvc .gitignore
+          git commit -m "Update predictions and data for GW${{ steps.ingestion.outputs.GAMEWEEK }}" || echo "No changes to commit"
           
       - name: Push to DVC
         env:
