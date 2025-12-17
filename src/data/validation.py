@@ -429,7 +429,7 @@ def main():
         '--seasons',
         nargs='+',
         default=['2015-2016', '2016-2017', '2017-2018', '2018-2019', 
-                '2019-2020', '2020-2021', '2021-2022', '2022-2023'],
+                '2019-2020', '2020-2021', '2021-2022', '2022-2023', '2023-2024'],
         help='Seasons to validate'
     )
     parser.add_argument(
@@ -439,7 +439,7 @@ def main():
     )
     parser.add_argument(
         '--features-path',
-        default='data/processed/v1/features.parquet',
+        default='data/processed/features.parquet',
         help='Path to features file'
     )
     

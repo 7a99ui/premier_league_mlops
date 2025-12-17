@@ -1,5 +1,5 @@
 """
-Data Preparation V3 - DeepChecks Compliant
+Data Preparation - DeepChecks Compliant
 Fixes all validation issues detected by DeepChecks
 """
 
@@ -13,7 +13,7 @@ import joblib
 from datetime import datetime
 
 
-class DataPreparatorV3:
+class DataPreparator:
     """
     DeepChecks-compliant data preparation:
     ✅ No temporal leakage (verified by DeepChecks)
@@ -30,14 +30,14 @@ class DataPreparatorV3:
         self.removed_features = []
         self.feature_names = []
     
-    def prepare_data(self, features_path, output_dir='data/processed/v3',
+    def prepare_data(self, features_path, output_dir='data/processed/',
                     min_gameweek=10, max_missing_pct=30, 
                     correlation_threshold=0.85):
         """
         Main preparation pipeline - DeepChecks compliant
         """
         print(f"\n{'='*70}")
-        print("DATA PREPARATION V3 (DEEPCHECKS COMPLIANT)")
+        print("DATA PREPARATION (DEEPCHECKS COMPLIANT)")
         print(f"{'='*70}\n")
         
         # 1. Load data
@@ -77,8 +77,8 @@ class DataPreparatorV3:
         identifier_cols = [
             'season', 'team', 'gameweek',
             'match_id', 'player_id', 'team_id', 'opponent_id',
-            'player_name', 'opponent', 'home_away',  # Additional identifiers
-            'date', 'datetime', 'timestamp'  # Temporal identifiers
+            'player_name', 'opponent', 'home_away',
+            'date', 'datetime', 'timestamp'
         ]
         
         # Also remove any column that looks like an ID
@@ -86,7 +86,7 @@ class DataPreparatorV3:
                           if col.endswith('_id') or col.startswith('id_')]
         
         identifier_cols.extend(id_pattern_cols)
-        identifier_cols = list(set(identifier_cols))  # Remove duplicates
+        identifier_cols = list(set(identifier_cols))
         
         feature_cols = [col for col in df_filtered.columns 
                        if col not in metadata_cols + [target_col, 'target_final_position']
@@ -177,7 +177,7 @@ class DataPreparatorV3:
         print(f"   ✓ All indices reset to 0-based sequential")
         
         # 13. Save
-        print(f"\n💾 Saving v3 datasets...")
+        print(f"\n💾 Saving datasets...")
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
@@ -201,7 +201,7 @@ class DataPreparatorV3:
         )
         
         print(f"\n{'='*70}")
-        print("✅ DATA PREPARATION V3 COMPLETE - DEEPCHECKS COMPLIANT!")
+        print("✅ DATA PREPARATION COMPLETE - DEEPCHECKS COMPLIANT!")
         print(f"{'='*70}")
         print(f"Fixes applied:")
         print(f"  ✅ Removed duplicate records ({n_removed} duplicates)")
@@ -465,7 +465,6 @@ class DataPreparatorV3:
         total = n_train + n_val + n_test
         
         metadata = {
-            'version': 'v3',
             'created_at': datetime.now().isoformat(),
             'description': 'DeepChecks-compliant data preparation',
             'deepchecks_compliance': {
@@ -510,17 +509,17 @@ class DataPreparatorV3:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Data Preparation V3 - DeepChecks Compliant'
+        description='Data Preparation - DeepChecks Compliant'
     )
     parser.add_argument(
         '--features-path',
-        default='data/processed/v1/features.parquet',
+        default='data/processed/features.parquet',
         help='Path to features file'
     )
     parser.add_argument(
         '--output-dir',
-        default='data/processed/v3',
-        help='Output directory for v3 data'
+        default='data/processed/',
+        help='Output directory for processed data'
     )
     parser.add_argument(
         '--min-gameweek',
@@ -543,7 +542,7 @@ def main():
     
     args = parser.parse_args()
     
-    preparator = DataPreparatorV3()
+    preparator = DataPreparator()
     result = preparator.prepare_data(
         features_path=args.features_path,
         output_dir=args.output_dir,
