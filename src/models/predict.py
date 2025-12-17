@@ -249,9 +249,37 @@ class PredictionPipeline:
                             X_ordered[col] = 0
                             
                     if extra:
-                        print(f"   ⚠️  Ignoring extra features not in scaler: {extra}")
-                        X_ordered = X_ordered[list(scaler_features)]
+                        print(f"   ⚠️  Features in model but not in scaler: {extra}")
+                        print(f"   ℹ️  Partial scaling strategy: Scaling common features, keeping extras raw")
+                        
+                        # Split: Common vs Extra
+                        common_cols = [c for c in scaler_features if c in X_ordered.columns]
+                        extra_cols = list(extra)
+                        
+                        # Scale ONLY common features
+                        X_common = X_ordered[common_cols]
+                        X_extra = X_ordered[extra_cols]
+                        
+                        X_common_scaled = self.scaler.transform(X_common)
+                        X_common_df = pd.DataFrame(X_common_scaled, columns=common_cols, index=X_ordered.index)
+                        
+                        # Concatenate
+                        X_prepared = pd.concat([X_common_df, X_extra], axis=1)
+                        
+                        # Restore Model's expected order
+                        X_prepared = X_prepared[X_ordered.columns]
+                        
+                        print(f"   ✅ Features partially scaled")
+                        
+                        # DEBUG: check stats
+                        if len(X_prepared) > 0:
+                            print(f"   📊 Stats (first 3):")
+                            for col in X_prepared.columns[:3]:
+                                print(f"      {col}: mean={X_prepared[col].mean():.3f}, std={X_prepared[col].std():.3f}")
+                        
+                        return X_prepared
                     else:
+                        # Standard case: exact match
                          X_ordered = X_ordered[list(scaler_features)]
                 
                 X_scaled = self.scaler.transform(X_ordered)
