@@ -86,8 +86,13 @@ jobs:
             
       - name: Generate features
         run: |
+          # Detect all available seasons in data/raw
+          # This ensures prepare.py has enough history (>3 seasons) for splitting and scaling
+          SEASONS=$(ls data/raw | grep -E '^[0-9]{4}-[0-9]{4}$' | tr '\n' ' ')
+          echo "Processing seasons: $SEASONS"
+          
           python src/data/features.py \
-            --seasons ${{ env.SEASON }} \
+            --seasons $SEASONS \
             --raw-data-dir data/raw \
             --output-dir data/processed/
       - name: Validate features

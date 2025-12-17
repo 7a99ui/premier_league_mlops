@@ -67,7 +67,12 @@ jobs:
           
       - name: Generate Features
         run: |
+          # Detect all available seasons in data/raw
+          SEASONS=$(ls data/raw | grep -E '^[0-9]{4}-[0-9]{4}$' | tr '\n' ' ')
+          echo "Processing seasons: $SEASONS"
+          
           python src/data/features.py \
+            --seasons $SEASONS \
             --raw-data-dir data/raw \
             --output-dir data/processed
             
