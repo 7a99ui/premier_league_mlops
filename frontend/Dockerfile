@@ -22,6 +22,9 @@ ENV MLFLOW_TRACKING_PASSWORD=a694eb64959fe496eb2edb4bce9a1ed71391c4bc
 
 
 # ✅ Configuration DVC (pour récupérer les dernières données au démarrage)
+# Initialize DVC project (no SCM needed in container)
+RUN dvc init --no-scm
+
 # Configure DVC to use DagsHub
 RUN dvc remote add -f origin s3://dvc
 RUN dvc remote modify origin endpointurl https://dagshub.com/7a99ui/premier_league_mlops.s3
