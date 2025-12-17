@@ -21,6 +21,14 @@ ENV MLFLOW_TRACKING_USERNAME=7a99ui
 ENV MLFLOW_TRACKING_PASSWORD=a694eb64959fe496eb2edb4bce9a1ed71391c4bc
 
 
-EXPOSE 8501
+# ✅ Configuration DVC (pour récupérer les dernières données au démarrage)
+# Configure DVC to use DagsHub
+RUN dvc remote add -f origin s3://dvc
+RUN dvc remote modify origin endpointurl https://dagshub.com/7a99ui/premier_league_mlops.s3
 
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Utiliser le token pour l'accès DVC via les variables d'environnement
+# NOTE: DAGSHUB_USER_TOKEN doit être passé au runtime ou hérité de MLFLOW_TRACKING_PASSWORD si c'est le même token
+CMD dvc remote modify origin --local access_key_id $MLFLOW_TRACKING_PASSWORD && \
+    dvc remote modify origin --local secret_access_key $MLFLOW_TRACKING_PASSWORD && \
+    dvc pull data/processed/test.parquet && \
+    streamlit run app.py --server.port=8501 --server.address=0.0.0.0

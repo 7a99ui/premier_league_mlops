@@ -5,3 +5,5 @@ scikit-learn
 lightgbm
 mlflow
 dagshub
+dvc
+dvc-s3
