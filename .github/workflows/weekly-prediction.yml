@@ -125,8 +125,7 @@ jobs:
           python src/models/predict.py \
             --season ${{ env.SEASON }} \
             --gameweek ${{ steps.ingestion.outputs.GAMEWEEK }} \
-            --mlflow-stage Production \
-            --output-dir predictions
+            --mlflow-stage Production
             
       - name: Generate evolution predictions
         env:
@@ -138,8 +137,7 @@ jobs:
             --season ${{ env.SEASON }} \
             --gameweek ${{ steps.ingestion.outputs.GAMEWEEK }} \
             --evolution \
-            --mlflow-stage Production \
-            --output-dir predictions/evolution
+            --mlflow-stage Production
             
       - name: Commit predictions and data to DVC
         run: |
