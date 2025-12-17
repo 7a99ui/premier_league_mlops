@@ -12,7 +12,7 @@ on:
         default: '2024-2025'
 
 env:
-  PYTHON_VERSION: '3.10'
+  PYTHON_VERSION: '3.11'
   SEASON: ${{ github.event.inputs.season || '2024-2025' }}
 
 jobs:
