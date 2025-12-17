@@ -235,6 +235,7 @@ class PredictionPipeline:
         # 5. Appliquer le scaling si disponible
         if self.scaler is not None:
             print(f"   🔄 Application du StandardScaler...")
+            try:
                 # Filter features to match scaler requirements if possible
                 if hasattr(self.scaler, 'feature_names_in_'):
                     scaler_features = self.scaler.feature_names_in_
