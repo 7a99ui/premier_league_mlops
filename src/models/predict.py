@@ -1,7 +1,7 @@
 """
 Prediction Pipeline with MLflow Registry Support
 Fait des prédictions du classement final à partir d'un gameweek donné
-Avec support pour le scaling, l'ordre correct des features et MLflow Registry
+Version simplifiée sans versioning des données
 """
 
 import pandas as pd
@@ -22,7 +22,7 @@ from src.models.utils import ModelPredictor
 
 class PredictionPipeline:
     """Pipeline pour générer et sauvegarder des prédictions"""
-    '''
+    
     def __init__(self, model_path=None, use_mlflow=True, mlflow_stage="Production"):
         """
         Args:
@@ -48,68 +48,12 @@ class PredictionPipeline:
             print(f"   Stage: {self.predictor.metadata.get('stage', 'unknown')}")
             print(f"   Version: {self.predictor.metadata.get('version', 'unknown')}")
         
-        # ===== Charger le scaler depuis v1 =====
+        # ===== Charger le scaler depuis data/processed/ =====
         self.scaler = None
         project_root = self._get_project_root()
         
-        scaler_path_v1 = project_root / 'data' / 'processed' / 'v1' / 'scaler.joblib'
-        
-        if scaler_path_v1.exists():
-            try:
-                self.scaler = joblib.load(scaler_path_v1)
-                print(f"✅ Scaler loaded from: {scaler_path_v1}")
-            except Exception as e:
-                print(f"⚠️  Failed to load scaler: {e}")
-        else:
-            print(f"⚠️  Scaler not found at: {scaler_path_v1}")
-            print(f"   Predictions may be inaccurate without scaling!")
-    '''
-    
-    
-    def __init__(self, model_path=None, use_mlflow=True, mlflow_stage="Production", data_version=None):
-        """
-        Args:
-            model_path: Chemin vers un modèle local spécifique. Si None, utilise MLflow ou latest.
-            use_mlflow: Si True, charge depuis MLflow Registry
-            mlflow_stage: Stage du modèle MLflow (Production, Staging, Archived)
-            data_version: Version des données à utiliser. Si None, utilise celle du modèle.
-        """
-        self.predictor = ModelPredictor(
-            model_path=model_path,
-            use_mlflow=use_mlflow,
-            mlflow_stage=mlflow_stage
-        )
-        
-        # Utiliser le chemin de base du projet
-        self.predictions_dir = Path(__file__).parent.parent.parent / 'predictions'
-        self.predictions_dir.mkdir(exist_ok=True)
-        self.features_cache = None  # Cache pour les features
-        
-        # Log model source
-        model_source = self.predictor.metadata.get('source', 'unknown')
-        print(f"🔍 Model source: {model_source}")
-        if model_source == 'mlflow_registry':
-            print(f"   Stage: {self.predictor.metadata.get('stage', 'unknown')}")
-            print(f"   Version: {self.predictor.metadata.get('version', 'unknown')}")
-        
-        # ===== Charger le scaler automatiquement selon la version des données =====
-        self.scaler = None
-        project_root = self._get_project_root()
-        
-        # Déterminer la version des données à utiliser
-        # Priorité: 1) data_version passé en paramètre, 2) metadata du modèle, 3) 'v1' par défaut
-        if data_version is not None:
-            self.data_version = data_version
-            print(f"📌 Using data version from parameter: {self.data_version}")
-        elif 'data_version' in self.predictor.metadata:
-            self.data_version = self.predictor.metadata['data_version']
-            print(f"📌 Using data version from model metadata: {self.data_version}")
-        else:
-            self.data_version = 'v1'
-            print(f"⚠️  No data version specified, using default: {self.data_version}")
-        
-        # Construire le chemin du scaler
-        scaler_path = project_root / 'data' / 'processed' / self.data_version / 'scaler.joblib'
+        # Chemin simplifié sans versioning
+        scaler_path = project_root / 'data' / 'processed' / 'scaler.joblib'
         
         if scaler_path.exists():
             try:
@@ -119,29 +63,16 @@ class PredictionPipeline:
                 print(f"⚠️  Failed to load scaler: {e}")
         else:
             print(f"⚠️  Scaler not found at: {scaler_path}")
-            print(f"   Available data versions:")
-            data_processed = project_root / 'data' / 'processed'
-            if data_processed.exists():
-                versions = [d.name for d in data_processed.iterdir() if d.is_dir()]
-                for v in sorted(versions):
-                    scaler_exists = (data_processed / v / 'scaler.joblib').exists()
-                    status = "✓" if scaler_exists else "✗"
-                    print(f"      {status} {v}")
             print(f"   Predictions may be inaccurate without scaling!")
-        
-        
     
     def _get_project_root(self):
         """Retourne le chemin racine du projet"""
         return Path(__file__).parent.parent.parent
     
-    def load_all_features(self, data_version='v1'):
+    def load_all_features(self):
         """
-        Charge toutes les features SANS DUPLICATIONS
-        Utilise UNIQUEMENT features.parquet
-        
-        Args:
-            data_version: Version des données ('v1', 'v2', etc.)
+        Charge toutes les features depuis data/processed/
+        Utilise features.parquet en priorité, sinon train+val+test
         
         Returns:
             DataFrame: Données combinées sans duplications
@@ -151,26 +82,20 @@ class PredictionPipeline:
             
         print("📂 Chargement de toutes les données...")
         
-        # ✅ CORRECTION : Utiliser le chemin absolu résolu
         project_root = self._get_project_root()
-        data_dir = project_root / 'data' / 'processed' / data_version
+        data_dir = project_root / 'data' / 'processed'
         
-        # ✅ DEBUG : Afficher le chemin exact
         print(f"   📍 Chemin utilisé: {data_dir.resolve()}")
         
-        # Charger SEULEMENT features.parquet
+        # Charger SEULEMENT features.parquet si disponible
         features_file = data_dir / 'features.parquet'
         
-        # ✅ DEBUG : Vérifier l'existence
-        print(f"   📍 Fichier: {features_file}")
-        print(f"   📍 Existe: {features_file.exists()}")
-        
         if features_file.exists():
-            print(f"  ✓ Chargement: features.parquet (fichier unique)")
+            print(f"  ✓ Chargement: features.parquet")
             combined_data = pd.read_parquet(features_file)
             print(f"  Total: {len(combined_data):,} lignes, {combined_data['team'].nunique()} équipes")
             
-            # ✅ DEBUG : Afficher les saisons
+            # Afficher les saisons
             print(f"  📅 Saisons présentes:")
             for season in sorted(combined_data['season'].unique()):
                 count = len(combined_data[combined_data['season'] == season])
@@ -178,7 +103,7 @@ class PredictionPipeline:
             
             # Vérification des colonnes
             feature_cols = [col for col in combined_data.columns 
-                        if col not in ['team', 'season', 'gameweek', 'target_final_points']]
+                        if col not in ['team', 'season', 'gameweek', 'target_final_points', 'target_final_position']]
             print(f"  Features: {len(feature_cols)}")
             
             # Vérifier qu'il n'y a pas de duplications
@@ -204,7 +129,7 @@ class PredictionPipeline:
             return combined_data
         
         else:
-            # FALLBACK: Si features.parquet n'existe pas
+            # FALLBACK: Si features.parquet n'existe pas, charger train+val+test
             print(f"  ⚠️  features.parquet non trouvé, chargement train+val+test...")
             
             possible_paths = [
@@ -225,6 +150,10 @@ class PredictionPipeline:
                         print(f"  ❌ Erreur: {e}")
             
             if not all_data:
+                print(f"\n❌ ERREUR: Aucune donnée trouvée dans {data_dir}")
+                print(f"   Fichiers attendus:")
+                print(f"   - features.parquet (préféré)")
+                print(f"   - OU train.parquet + val.parquet + test.parquet")
                 raise FileNotFoundError(f"Aucune donnée trouvée dans {data_dir}")
             
             combined_data = pd.concat(all_data, ignore_index=True)
@@ -246,7 +175,7 @@ class PredictionPipeline:
             
             # Vérification des colonnes
             feature_cols = [col for col in combined_data.columns 
-                        if col not in ['team', 'season', 'gameweek', 'target_final_points']]
+                        if col not in ['team', 'season', 'gameweek', 'target_final_points', 'target_final_position']]
             print(f"  Features: {len(feature_cols)}")
             
             self.features_cache = combined_data
@@ -254,11 +183,9 @@ class PredictionPipeline:
     
     def _get_model_feature_names(self):
         """Récupère les noms des features depuis les métadonnées du modèle"""
-        # Try different metadata keys depending on source
         if 'feature_names' in self.predictor.metadata:
             return self.predictor.metadata['feature_names']
         elif 'params' in self.predictor.metadata:
-            # MLflow model might not have explicit feature names
             return []
         else:
             return []
@@ -281,7 +208,7 @@ class PredictionPipeline:
         if not feature_order:
             print(f"⚠️  Pas d'information sur l'ordre des features dans les métadonnées")
             feature_order = [col for col in features_df.columns 
-                           if col not in ['team', 'season', 'gameweek', 'target_final_points']]
+                           if col not in ['team', 'season', 'gameweek', 'target_final_points', 'target_final_position']]
         
         print(f"   Nombre de features attendues: {len(feature_order)}")
         
@@ -327,7 +254,7 @@ class PredictionPipeline:
             print(f"   ⚠️  Aucun scaler disponible, utilisation des features brutes")
             return X_ordered
     
-    def predict_at_gameweek(self, season, gameweek, features_path=None, data_version='v1'):
+    def predict_at_gameweek(self, season, gameweek, features_path=None):
         """
         Prédit le classement final à partir d'un gameweek donné
         
@@ -335,7 +262,6 @@ class PredictionPipeline:
             season: Saison (ex: '2024-2025')
             gameweek: Gameweek actuel (ex: 15)
             features_path: Chemin vers les features. Si None, cherche automatiquement
-            data_version: Version des données ('v1', 'v2', etc.)
         
         Returns:
             DataFrame: Prédictions avec classement
@@ -371,7 +297,7 @@ class PredictionPipeline:
             print(f"📂 Chargement des données depuis: {features_path}")
             features_df = pd.read_parquet(features_path)
         else:
-            features_df = self.load_all_features(data_version=data_version)
+            features_df = self.load_all_features()
         
         # Essayer différents formats de saison
         season_formats = [season, season.replace('-', '/'), season.replace('-', '_')]
@@ -420,8 +346,6 @@ class PredictionPipeline:
         
         # Préparer les features pour la prédiction
         X_prepared = self._prepare_features_for_prediction(season_data)
-        
-
         
         # Faire les prédictions
         print(f"\n🎯 Génération des prédictions...")
@@ -550,8 +474,7 @@ class PredictionPipeline:
         print("Legend: 🏆 Top 4 (UCL) | ⚽ Europa spots | ⚠️ Relegation zone")
         print(f"{'='*70}")
     
-    def predict_and_save(self, season, gameweek, features_path=None, 
-                    display=True, data_version='v1'):
+    def predict_and_save(self, season, gameweek, features_path=None, display=True):
         """
         Pipeline complet : prédire, sauvegarder et afficher
         
@@ -560,18 +483,12 @@ class PredictionPipeline:
             gameweek: Gameweek
             features_path: Chemin vers les features
             display: Afficher les résultats
-            data_version: Version des données ('v1', 'v2', etc.)
         
         Returns:
             DataFrame: Prédictions
         """
-        # ✅ CORRECTION : Utiliser self.data_version si data_version n'est pas fourni
-        if data_version == 'v1' and hasattr(self, 'data_version'):
-            data_version = self.data_version
-            print(f"📌 Using data version from pipeline: {data_version}")
-        
         # Prédictions
-        predictions = self.predict_at_gameweek(season, gameweek, features_path, data_version)
+        predictions = self.predict_at_gameweek(season, gameweek, features_path)
         
         # Afficher
         if display:
@@ -610,7 +527,7 @@ class PredictionPipeline:
         return predictions
 
 
-def predict_evolution(season, start_gw, end_gw, features_path=None, data_version='v1',
+def predict_evolution(season, start_gw, end_gw, features_path=None,
                      use_mlflow=True, mlflow_stage="Production"):
     """
     Prédit l'évolution du classement sur plusieurs gameweeks
@@ -620,7 +537,6 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
         start_gw: Gameweek de début
         end_gw: Gameweek de fin
         features_path: Chemin vers les features
-        data_version: Version des données
         use_mlflow: Utiliser MLflow Registry
         mlflow_stage: Stage du modèle MLflow
     
@@ -634,13 +550,13 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
     print(f"Gameweeks: {start_gw} to {end_gw}")
     print(f"{'='*70}\n")
     
-    pipeline = PredictionPipeline(use_mlflow=use_mlflow, mlflow_stage=mlflow_stage, data_version=data_version)
+    pipeline = PredictionPipeline(use_mlflow=use_mlflow, mlflow_stage=mlflow_stage)
     evolution = {}
     
     for gw in range(start_gw, end_gw + 1):
         try:
             print(f"\n🔄 Predicting at gameweek {gw}...")
-            predictions = pipeline.predict_at_gameweek(season, gw, features_path,data_version=data_version)
+            predictions = pipeline.predict_at_gameweek(season, gw, features_path)
             evolution[gw] = predictions
             
             if 'points_error' in predictions.columns:
@@ -688,6 +604,7 @@ def predict_evolution(season, start_gw, end_gw, features_path=None, data_version
     
     return evolution
 
+
 def main():
     parser = argparse.ArgumentParser(description='Predict Premier League Final Standings with MLflow Support')
     parser.add_argument('--season', required=True, help='Season (e.g., 2024-2025)')
@@ -697,8 +614,6 @@ def main():
                        help='Path to features file')
     parser.add_argument('--model-path', default=None,
                        help='Path to specific local model (default: uses MLflow Production)')
-    parser.add_argument('--data-version', default=None,
-                       help='Data version to use (v1, v2, etc. - default: from model metadata)')
     parser.add_argument('--evolution', action='store_true',
                        help='Predict evolution from gameweek 10 to current')
     parser.add_argument('--no-mlflow', action='store_true',
@@ -719,32 +634,27 @@ def main():
             args.gameweek, 
             args.features_path,
             use_mlflow=use_mlflow,
-            mlflow_stage=args.mlflow_stage,
-            data_version=args.data_version  # ✅ AJOUTER ICI
+            mlflow_stage=args.mlflow_stage
         )
     else:
         # Prédiction simple
         pipeline = PredictionPipeline(
             model_path=args.model_path,
             use_mlflow=use_mlflow,
-            mlflow_stage=args.mlflow_stage,
-            data_version=args.data_version  # ✅ AJOUTER ICI
+            mlflow_stage=args.mlflow_stage
         )
         predictions = pipeline.predict_and_save(
             args.season, 
             args.gameweek, 
             args.features_path
         )
-    
     print(f"\n✅ Prediction complete!")
-    
     if use_mlflow:
         print(f"\n💡 Using MLflow Registry model (stage: {args.mlflow_stage})")
         print(f"   To use local model instead: add --no-mlflow flag")
     else:
         print(f"\n💡 Using local model")
         print(f"   To use MLflow Registry: remove --no-mlflow flag")
-
-
+    
 if __name__ == '__main__':
     main()

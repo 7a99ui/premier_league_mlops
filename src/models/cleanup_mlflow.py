@@ -163,7 +163,7 @@ def main():
                        default='PremierLeagueModel',
                        help='Nom du modèle (par défaut: PremierLeagueModel)')
     parser.add_argument('--experiment-name',
-                       default='PremierLeague-Training',
+                       default='premier-league-predictions',
                        help='Nom de l\'expérience (pour delete-runs)')
     parser.add_argument('--confirm',
                        action='store_true',
