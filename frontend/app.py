@@ -329,7 +329,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------ PATHS ------------------
-DATA_PATH = Path("data/processed/v3/test.parquet")
+DATA_PATH = Path("data/processed/test.parquet")
 
 # ------------------ LOAD DATA ------------------
 try:
