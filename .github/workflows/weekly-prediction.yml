@@ -141,12 +141,11 @@ jobs:
             
       - name: Commit predictions and data to DVC
         run: |
-          dvc add predictions/
           dvc add data/processed/
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add predictions.dvc data/processed.dvc .gitignore
-          git commit -m "Update predictions and data for GW${{ steps.ingestion.outputs.GAMEWEEK }}" || echo "No changes to commit"
+          git add data/processed.dvc .gitignore
+          git commit -m "Update training data for GW${{ steps.ingestion.outputs.GAMEWEEK }}" || echo "No changes to commit"
           
       - name: Push to DVC
         run: |
