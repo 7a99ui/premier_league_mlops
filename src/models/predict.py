@@ -235,9 +235,26 @@ class PredictionPipeline:
         # 5. Appliquer le scaling si disponible
         if self.scaler is not None:
             print(f"   🔄 Application du StandardScaler...")
-            try:
+                # Filter features to match scaler requirements if possible
+                if hasattr(self.scaler, 'feature_names_in_'):
+                    scaler_features = self.scaler.feature_names_in_
+                    # Check for missing or extra features
+                    missing = set(scaler_features) - set(X_ordered.columns)
+                    extra = set(X_ordered.columns) - set(scaler_features)
+                    
+                    if missing:
+                        print(f"   ⚠️  Missing features for scaler: {len(missing)}")
+                        for col in missing:
+                            X_ordered[col] = 0
+                            
+                    if extra:
+                        print(f"   ⚠️  Ignoring extra features not in scaler: {extra}")
+                        X_ordered = X_ordered[list(scaler_features)]
+                    else:
+                         X_ordered = X_ordered[list(scaler_features)]
+                
                 X_scaled = self.scaler.transform(X_ordered)
-                X_prepared = pd.DataFrame(X_scaled, columns=feature_order, index=X_ordered.index)
+                X_prepared = pd.DataFrame(X_scaled, columns=X_ordered.columns, index=X_ordered.index)
                 print(f"   ✅ Features scalées")
                 
                 # DEBUG: Vérifier après scaling
@@ -380,13 +397,17 @@ class PredictionPipeline:
         
         # Si disponible, ajouter le classement réel
         if 'target_final_points' in season_data.columns:
-            actual_standings = season_data[['team', 'target_final_points']].copy()
-            actual_standings.columns = ['team', 'actual_final_points']
-            actual_standings['actual_rank'] = actual_standings['actual_final_points'].rank(
-                ascending=False, method='min'
-            ).astype(int)
-            
-            results = results.merge(actual_standings, on='team', how='left')
+            # Check if we have valid data (not all NaNs)
+            if season_data['target_final_points'].notna().any():
+                actual_standings = season_data[['team', 'target_final_points']].copy()
+                actual_standings.columns = ['team', 'actual_final_points']
+                actual_standings['actual_rank'] = actual_standings['actual_final_points'].rank(
+                    ascending=False, method='min'
+                ).astype(int)
+                
+                results = results.merge(actual_standings, on='team', how='left')
+            else:
+                print(f"   ℹ️  Target points are all NaN (future season?), skipping accuracy metrics")
             
             # Calculer les erreurs si les données réelles sont disponibles
             if 'actual_final_points' in results.columns:
