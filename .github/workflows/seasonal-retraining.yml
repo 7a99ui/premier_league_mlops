@@ -42,17 +42,12 @@ jobs:
           pip install dvc-s3
           
       - name: Configure DVC
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
-          # DVC with DagsHub S3 endpoint
-          echo "DVC configured with S3 endpoint"
-          
+          # Configure DVC with DagsHub Token
+          dvc remote modify origin --local access_key_id ${{ secrets.DAGSHUB_TOKEN }}
+          dvc remote modify origin --local secret_access_key ${{ secrets.DAGSHUB_TOKEN }}
+
       - name: Pull latest data from DVC
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           dvc pull
           
@@ -125,10 +120,6 @@ jobs:
           git add data/processed.dvc .gitignore
           git commit -m "Update training data after seasonal ingestion" || echo "No data changes to commit"
           
-      - name: Push to DVC
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           dvc push
           

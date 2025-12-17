@@ -43,17 +43,13 @@ jobs:
           pip install dvc-s3  # Required for DagsHub S3 storage
           
       - name: Configure DVC
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
-          # DVC avec S3 endpoint DagsHub
-          echo "DVC configured with S3 endpoint"
-          
+          # Configure DVC with S3 endpoint explicitly
+          dvc remote modify origin --local access_key_id ${{ secrets.DAGSHUB_TOKEN }}
+          dvc remote modify origin --local secret_access_key ${{ secrets.DAGSHUB_TOKEN }} 
+          echo "DVC configured with DagsHub Token"
+
       - name: Pull latest data from DVC
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           dvc pull
           
@@ -150,9 +146,6 @@ jobs:
           git commit -m "Update predictions and data for GW${{ steps.ingestion.outputs.GAMEWEEK }}" || echo "No changes to commit"
           
       - name: Push to DVC
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_USERNAME }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           dvc push
           
