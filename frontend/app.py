@@ -427,7 +427,27 @@ feature_cols = [
     if col not in metadata_cols + [target_col]
 ]
 
-X = season_data[feature_cols]
+X = season_data[feature_cols].copy()
+
+# ------------------ FEATURE ALIGNMENT ------------------
+# Handle mismatch between data features and model features
+if hasattr(model, 'feature_names_in_'):
+    model_features = model.feature_names_in_
+    
+    # Add missing features as zeros
+    missing_features = set(model_features) - set(X.columns)
+    if missing_features:
+        st.sidebar.warning(f"⚠️ Adding {len(missing_features)} missing features as zeros")
+        for feat in missing_features:
+            X[feat] = 0
+    
+    # Remove extra features
+    extra_features = set(X.columns) - set(model_features)
+    if extra_features:
+        st.sidebar.info(f"ℹ️ Ignoring {len(extra_features)} extra features")
+    
+    # Reorder to match model's expected order
+    X = X[list(model_features)]
 
 # ------------------ PREDICTION ------------------
 season_data["predicted_points"] = model.predict(X)
