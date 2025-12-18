@@ -30,9 +30,10 @@ set -e\n\
 echo "🔄 Cloning repository..."\n\
 git clone --depth 1 --branch $GIT_BRANCH $REPO_URL /tmp/repo\n\
 \n\
-echo "📂 Copying data structure..."\n\
+echo "📂 Copying data structure and git metadata..."\n\
 cp -r /tmp/repo/data /app/\n\
 cp -r /tmp/repo/.dvc /app/\n\
+cp -r /tmp/repo/.git /app/\n\
 \n\
 echo "🔧 Configuring DVC..."\n\
 cd /app\n\
