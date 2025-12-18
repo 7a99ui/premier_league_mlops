@@ -33,5 +33,5 @@ RUN dvc remote modify origin endpointurl https://dagshub.com/7a99ui/premier_leag
 # NOTE: DAGSHUB_USER_TOKEN doit être passé au runtime ou hérité de MLFLOW_TRACKING_PASSWORD si c'est le même token
 CMD dvc remote modify origin --local access_key_id $MLFLOW_TRACKING_PASSWORD && \
     dvc remote modify origin --local secret_access_key $MLFLOW_TRACKING_PASSWORD && \
-    dvc pull data/processed/test.parquet && \
+    dvc pull --force data/processed/test.parquet && \
     streamlit run app.py --server.port=8501 --server.address=0.0.0.0
