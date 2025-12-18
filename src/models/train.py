@@ -37,8 +37,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-import dagshub
-dagshub.init(repo_owner="7a99ui", repo_name="premier_league_mlops", mlflow=True)
+# DagsHub integration (not needed when MLFLOW_TRACKING_URI is set via env vars)
+# import dagshub
+# dagshub.init(repo_owner="7a99ui", repo_name="premier_league_mlops", mlflow=True)
 
 
 class MLflowTracker:
