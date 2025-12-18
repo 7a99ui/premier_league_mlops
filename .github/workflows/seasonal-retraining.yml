@@ -116,16 +116,14 @@ jobs:
             --register-models \
             --auto-promote
             
-      - name: Commit updated data to DVC
+      - name: Commit and push data to DVC
         run: |
           # Commit the new dataset versions
           dvc add data/processed/
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/processed.dvc .gitignore
-          git commit -m "Update training data after seasonal ingestion" || echo "No data changes to commit"
-          
-        run: |
+          git commit -m "Update training data after seasonal retraining" || echo "No data changes to commit"
           dvc push
           
       - name: Push to GitHub
