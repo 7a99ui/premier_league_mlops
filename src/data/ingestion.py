@@ -111,11 +111,36 @@ class HistoricalDataFetcher:
         """Récupère toutes les données pour les saisons sélectionnées"""
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         
+        # 🔍 Detect existing seasons
+        existing_seasons = set()
+        output_path = Path(output_dir)
+        if output_path.exists():
+            for season_dir in output_path.iterdir():
+                if season_dir.is_dir() and (season_dir / 'results.csv').exists():
+                    existing_seasons.add(season_dir.name)
+        
+        # Filter out already downloaded seasons
+        seasons_to_fetch = {
+            name: id for name, id in self.seasons.items() 
+            if name not in existing_seasons
+        }
+        
+        if existing_seasons:
+            print(f"\n✅ Found {len(existing_seasons)} existing seasons, skipping them:")
+            for season in sorted(existing_seasons):
+                print(f"   • {season}")
+        
+        if not seasons_to_fetch:
+            print(f"\n{'='*70}")
+            print("✅ ALL SEASONS ALREADY DOWNLOADED - NOTHING TO DO!")
+            print(f"{'='*70}")
+            return True
+        
         print(f"\n{'='*70}")
-        print(f"FETCHING HISTORICAL DATA FOR {len(self.seasons)} SEASONS")
+        print(f"FETCHING HISTORICAL DATA FOR {len(seasons_to_fetch)} NEW SEASONS")
         print(f"{'='*70}\n")
         
-        for season_name, season_id in self.seasons.items():
+        for season_name, season_id in seasons_to_fetch.items():
             print(f"\n📅 Processing season: {season_name}")
             
             # Créer le dossier pour la saison
@@ -152,7 +177,8 @@ class HistoricalDataFetcher:
         print("✅ HISTORICAL DATA FETCH COMPLETE!")
         print(f"{'='*70}")
         print(f"Data saved in: {output_dir}/")
-        print(f"Seasons processed: {len(self.seasons)}")
+        print(f"Seasons processed: {len(seasons_to_fetch)}")
+        print(f"Seasons skipped: {len(existing_seasons)}")
         
         return True
     
