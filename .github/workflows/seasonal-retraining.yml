@@ -113,7 +113,6 @@ jobs:
           python src/models/train.py \
             --phase all \
             --data-dir data/processed \
-            --register-models \
             --auto-promote
             
       - name: Commit and push data to DVC
